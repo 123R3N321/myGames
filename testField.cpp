@@ -172,6 +172,7 @@ void render() {
     glEnableVertexAttribArray(g_shader_program.get_position_attribute());
     glDrawArrays(GL_TRIANGLES, 0, 3);
     glDisableVertexAttribArray(g_shader_program.get_position_attribute());
+    //the above 4 lines create the triangle
 
     SDL_GL_SwapWindow(g_display_window);
 }
