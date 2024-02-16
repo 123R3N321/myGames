@@ -4,6 +4,11 @@
 #ifdef _WINDOWS
 #include <GL/glew.h>
 #endif
+
+//additional include for sprite linking
+//#include "stb_image.h"
+#include "include/stb_image.h"
+
 //#include "SDL.h"
 #include "/home/ren/Downloads/CS3113OfficialWindowsSetup/WindowsSetup/SDL/SDL2/include/SDL.h"
 
@@ -32,11 +37,13 @@ const float ROT_ANGLE = glm::radians(1.0f);
 // Translation stuff
 const float TRAN_VALUE = 0.025f;
 
+float g_triangle_rot=0.00f;
+float g_triangle_x_pos = 0.00f; //added position tracker to take over model matrix
 int g_frame_counter = 0;
 bool g_is_growing = true;
 
 // Background color components
-const float BG_RED     = 0.1922f,
+const float BG_RED     = 0.1922f,       //btw I think this is the french blue color
         BG_BLUE    = 0.549f,
         BG_GREEN   = 0.9059f,
         BG_OPACITY = 1.0f;
@@ -126,6 +133,7 @@ void process_input()
 
 void update()
 {
+
     glm::vec3 scale_vector;
     g_frame_counter += 1;
 
@@ -152,6 +160,18 @@ void update()
 //                             1.001f,
 //                             1.0f);
 
+//    g_model_matrix = glm::scale(g_model_matrix, scale_vector);
+//
+//}
+
+//void update_test2()
+//{
+//    g_triangle_rot += 0.01f;
+//    g_triangle_x_pos += 0.01f;
+//    scale_vector = glm::vec3(1.001f,
+//                             1.001f,
+//                             1.0f);
+//
 //    g_model_matrix = glm::scale(g_model_matrix, scale_vector);
 //
 //}

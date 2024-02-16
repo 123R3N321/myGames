@@ -83,10 +83,6 @@ GLuint ShaderProgram::load_shader_from_string(const std::string &shaderContents,
 
 
 
-
-
-
-
     
     // If the shader did not compile, print the error to stdout
     if (compile_success == GL_FALSE)
