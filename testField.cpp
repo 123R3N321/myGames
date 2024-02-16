@@ -1,5 +1,6 @@
 #define GL_SILENCE_DEPRECATION
 #define GL_GLEXT_PROTOTYPES 1
+#define STB_IMAGE_IMPLEMENTATION
 
 #ifdef _WINDOWS
 #include <GL/glew.h>
@@ -22,9 +23,31 @@
 #include "include/ShaderProgram.h"               // We'll talk about these later in the course
 
 
+//debug purposes
+#define LOG(argument) std::cout << argument << '\n'
+
+// used for control system?
+enum Coordinate
+{
+    x_coordinate,
+    y_coordinate
+};
+
 // Our window dimensions
 const int WINDOW_WIDTH  = 640,
         WINDOW_HEIGHT = 480;
+
+//units
+const float MILLISECONDS_IN_SECOND = 1000.0;
+const float DEGREES_PER_SECOND = 90.0f;
+
+//for sprite
+const int NUMBER_OF_TEXTURES = 1; // to be generated, that is
+const GLint LEVEL_OF_DETAIL = 0;  // base image level; Level n is the nth mipmap reduction image
+const GLint TEXTURE_BORDER = 0;   // this value MUST be zero
+
+//todo: we need to get sprite here
+//const char PLAYER_SPRITE_FILEPATH[] = "assets/whatev.png";
 
 // Heartbeat stuff
 const float GROWTH_FACTOR = 1.01f;  // grow by 1.0% / frame
@@ -59,7 +82,11 @@ const int VIEWPORT_X      = 0,
 // We'll have a whole lecture on these later
 
 
-//const char V_SHADER_PATH[] = "shaders/vertex.glsl",
+/*
+const char V_SHADER_PATH[] = "shaders/vertex_textured.glsl",
+        F_SHADER_PATH[] = "shaders/fragment_textured.glsl";
+*/
+
 //todo: I modified the file path to below to get it fixed!
 const char V_SHADER_PATH[] ="/home/ren/projects/myGames/include/shaders/vertex.glsl",
                 F_SHADER_PATH[] = "/home/ren/projects/myGames/include/shaders/fragment.glsl";
