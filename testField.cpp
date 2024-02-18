@@ -6,6 +6,8 @@
 #include <GL/glew.h>
 #endif
 
+//#include "/home/ren/Downloads/CS3113OfficialWindowsSetup/WindowsSetup/SDL/SDL2/include/SDL_mouse.h"
+
 //additional include for sprite linking
 //#include "stb_image.h"
 #include "include/stb_image.h"
@@ -23,93 +25,59 @@
 #include "include/ShaderProgram.h"               // We'll talk about these later in the course
 
 
-//debug purposes
-#define LOG(argument) std::cout << argument << '\n'
+const char V_SHADER_PATH[] ="/home/ren/projects/myGames/include/shaders/vertex.glsl",
+        F_SHADER_PATH[] = "/home/ren/projects/myGames/include/shaders/fragment.glsl";
 
-// used for control system?
-enum Coordinate
-{
-    x_coordinate,
-    y_coordinate
-};
-
-// Our window dimensions
-const int WINDOW_WIDTH  = 640,
+const int WINDOW_WIDTH = 640,
         WINDOW_HEIGHT = 480;
 
-//units
-const float MILLISECONDS_IN_SECOND = 1000.0;
-const float DEGREES_PER_SECOND = 90.0f;
-
-//for sprite
-const int NUMBER_OF_TEXTURES = 1; // to be generated, that is
-const GLint LEVEL_OF_DETAIL = 0;  // base image level; Level n is the nth mipmap reduction image
-const GLint TEXTURE_BORDER = 0;   // this value MUST be zero
-
-//todo: we need to get sprite here
-//const char PLAYER_SPRITE_FILEPATH[] = "assets/whatev.png";
-
-// Heartbeat stuff
-const float GROWTH_FACTOR = 1.01f;  // grow by 1.0% / frame
-const float SHRINK_FACTOR = 0.99f;  // grow by -1.0% / frame
-const int MAX_FRAMES = 40;
-
-// Rotation stuff
-const float ROT_ANGLE = glm::radians(1.0f);
-
-// Translation stuff
-const float TRAN_VALUE = 0.025f;
-
-float g_triangle_rot=0.00f;
-float g_triangle_x_pos = 0.00f; //added position tracker to take over model matrix
-int g_frame_counter = 0;
-bool g_is_growing = true;
-
-// Background color components
-const float BG_RED     = 0.1922f,       //btw I think this is the french blue color
-        BG_BLUE    = 0.549f,
-        BG_GREEN   = 0.9059f,
+const float BG_RED = 0.1922f,
+        BG_BLUE = 0.549f,
+        BG_GREEN = 0.9059f,
         BG_OPACITY = 1.0f;
 
-// Our viewport—or our "camera"'s—position and dimensions
-const int VIEWPORT_X      = 0,
-        VIEWPORT_Y      = 0,
-        VIEWPORT_WIDTH  = WINDOW_WIDTH,
+const int VIEWPORT_X = 0,
+        VIEWPORT_Y = 0,
+        VIEWPORT_WIDTH = WINDOW_WIDTH,
         VIEWPORT_HEIGHT = WINDOW_HEIGHT;
 
-// Our shader filepaths; these are necessary for a number of things
-// Not least, to actually draw our shapes
-// We'll have a whole lecture on these later
-
-
-/*
-const char V_SHADER_PATH[] = "shaders/vertex_textured.glsl",
-        F_SHADER_PATH[] = "shaders/fragment_textured.glsl";
-*/
-
-//todo: I modified the file path to below to get it fixed!
-const char V_SHADER_PATH[] ="/home/ren/projects/myGames/include/shaders/vertex.glsl",
-                F_SHADER_PATH[] = "/home/ren/projects/myGames/include/shaders/fragment.glsl";
-
-// Our object's fill colour
-const float TRIANGLE_RED     = 1.0,
+const int TRIANGLE_RED     = 1.0,
         TRIANGLE_BLUE    = 0.4,
         TRIANGLE_GREEN   = 0.4,
-        TRIANGLE_OPACITY = 1.0;
+        TRIANGLE_OPACITY = 1.0,
+        MAX_FRAME        = 40;  //framerate??
 
-bool g_game_is_running = true;
 SDL_Window* g_display_window;
 
-ShaderProgram g_shader_program;
+bool g_game_is_running = true;
 
-glm::mat4 g_view_matrix,        // Defines the position (location and orientation) of the camera
-g_model_matrix,       // Defines every translation, rotation, and/or scaling applied to an object; we'll look at these next week
-g_projection_matrix;  // Defines the characteristics of your camera, such as clip panes, field of view, projection method, etc.
+ShaderProgram g_shader_program;
+glm::mat4 g_view_matrix,
+        g_model_matrix,
+        g_satellite_matrix, //this is the orbiting object
+        g_sub_satellite_matrix, //this the object that orbits the orbiting project
+        g_projection_matrix;
+
+
+// ——————————— GLOBAL VARS AND CONSTS FOR TRANSFORMATIONS ——————————— //
+
+float delta_time;
+float g_previous_ticks  = 0.0f;
+float speed = 2.0f;
+float x_pos = 0.0f;
+float y_pos = 0.0f;
+
+const float radius = 2.0f;
+
+glm::vec3 g_player_position = glm::vec3(0.0f, 0.0f, 0.0f);     //
+glm::vec3 g_player_movement = glm::vec3(0.0f, 0.0f, 0.0f);
+
+// —————————————————————————————————————————————————————————————————— //
 
 void initialise()
 {
     SDL_Init(SDL_INIT_VIDEO);
-    g_display_window = SDL_CreateWindow("Hello, Moving Triangle!",
+    g_display_window = SDL_CreateWindow("Homework1 on Steroid",
                                         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                                         WINDOW_WIDTH, WINDOW_HEIGHT,
                                         SDL_WINDOW_OPENGL);
@@ -121,108 +89,237 @@ void initialise()
     glewInit();
 #endif
 
-    // Initialise our camera
     glViewport(VIEWPORT_X, VIEWPORT_Y, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 
-    // Load up our shaders
     g_shader_program.load(V_SHADER_PATH, F_SHADER_PATH);
 
-    // Initialise our view, model, and projection matrices
-    g_view_matrix       = glm::mat4(1.0f);  // Defines the position (location and orientation) of the camera
-    g_model_matrix      = glm::mat4(1.0f);  // Defines every translation, rotations, or scaling applied to an object
-    g_projection_matrix = glm::ortho(-5.0f, 5.0f, -3.75f, 3.75f, -1.0f, 1.0f);  // Defines the characteristics of your camera, such as clip planes, field of view, projection method etc.
+    g_view_matrix       = glm::mat4(1.0f);
+    g_model_matrix      = glm::mat4(1.0f);
+    g_satellite_matrix = glm::mat4(1.0f);   //value for orbiting object assigned
+    g_sub_satellite_matrix = glm::mat4(1.0f);   //value for sub_orbiting object assigned
 
-//    g_model_matrix = glm::translate(g_model_matrix, glm::vec3(5.0f, 0.0f, 0.0f));
+    g_projection_matrix = glm::ortho(-5.0f, 5.0f, -3.75f, 3.75f, -1.0f, 1.0f);
 
     g_shader_program.set_projection_matrix(g_projection_matrix);
     g_shader_program.set_view_matrix(g_view_matrix);
-    // Notice we haven't set our model matrix yet!
 
     g_shader_program.set_colour(TRIANGLE_RED, TRIANGLE_BLUE, TRIANGLE_GREEN, TRIANGLE_OPACITY);
 
-    // Each object has its own unique ID
     glUseProgram(g_shader_program.get_program_id());
 
     glClearColor(BG_RED, BG_BLUE, BG_GREEN, BG_OPACITY);
 }
 
-void process_input()
+
+enum Coordinate { x_coordinate, y_coordinate };
+
+
+const Coordinate X_COORDINATE = x_coordinate;
+const Coordinate Y_COORDINATE = y_coordinate;
+
+const float ORTHO_WIDTH  = 7.5f,
+        ORTHO_HEIGHT = 10.0f;
+
+float get_screen_to_ortho(float coordinate, Coordinate axis)
 {
-    SDL_Event event;
-    while (SDL_PollEvent(&event))
+    switch(axis)
     {
-        if (event.type == SDL_QUIT || event.type == SDL_WINDOWEVENT_CLOSE)
-        {
-            g_game_is_running = false;
-        }
+        case x_coordinate: return ((coordinate / WINDOW_WIDTH) * ORTHO_WIDTH) - (ORTHO_WIDTH / 2.0);
+        case y_coordinate: return (((WINDOW_HEIGHT - coordinate) / WINDOW_HEIGHT) * ORTHO_HEIGHT) - (ORTHO_HEIGHT / 2.0);
+        default          : return 0.0f;
     }
 }
+
+int mouseX, mouseY;
+float orthoX, orthoY;
+
+void process_input()
+{
+    g_player_movement = glm::vec3(0.0f);
+
+    SDL_GetMouseState(&mouseX, &mouseY);
+    orthoX = get_screen_to_ortho(mouseX, X_COORDINATE);
+    orthoY = get_screen_to_ortho(mouseY, Y_COORDINATE);
+
+
+    //
+    //
+    // –––––––––––––––––––––––––––––––– KEYSTROKES ––––––––––––––––––––––––– //
+    //
+    SDL_Event event;                                                         //
+    while (SDL_PollEvent(&event))                                            //
+    {                                                                        //
+        switch (event.type)                                                  //
+        {                                                                    //
+            // End game                                                      //
+            case SDL_QUIT:                                                   //
+            case SDL_WINDOWEVENT_CLOSE:                                      //
+                g_game_is_running = false;                                   //
+                break;                                                       //
+                //
+            case SDL_KEYDOWN:                                                //
+                switch (event.key.keysym.sym)                                //
+                {                                                            //
+                    case SDLK_LEFT:                                          //
+                        // Move the player left                              //
+                        break;                                               //
+                        //
+                    case SDLK_RIGHT:                                         //
+                        // Move the player right                             //
+                        g_player_movement.x = 1.0f;                          //
+                        break;                                               //
+                        //
+                    case SDLK_q:                                             //
+                        // Quit the game with a keystroke                    //
+                        g_game_is_running = false;                           //
+                        break;                                               //
+                        //
+                    default:                                                 //
+                        break;                                               //
+                }
+
+                //
+                //
+            default:                                                         //
+                break;                                                       //
+        }                                                                    //
+    }                                                                        //
+    //
+    // ––––––––––––––––––––––––––––––– KEY HOLD –––––––––––––––––––––––––––– //
+    //
+    const Uint8 *key_state = SDL_GetKeyboardState(NULL);                     //
+    //
+    if (key_state[SDL_SCANCODE_LEFT])                                        //
+    {                                                                        //
+        g_player_movement.x = -1.0f;                                         //
+    }                                                                        //
+    else if (key_state[SDL_SCANCODE_RIGHT])                                  //
+    {                                                                        //
+        g_player_movement.x = 1.0f;                                          //
+    }                                                                        //
+    //
+    if (key_state[SDL_SCANCODE_UP])                                          //
+    {                                                                        //
+        g_player_movement.y = 1.0f;                                          //
+    }                                                                        //
+    else if (key_state[SDL_SCANCODE_DOWN])                                   //
+    {                                                                        //
+        g_player_movement.y = -1.0f;                                         //
+    }                                                                        //
+    //
+    // This makes sure that the player can't "cheat" their way into moving   //
+    // faster                                                                //
+    if (glm::length(g_player_movement) > 1.0f)                               //
+    {                                                                        //
+        g_player_movement = glm::normalize(g_player_movement);               //
+    }                                                                        //
+    // ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––– //
+}
+void timer(){
+    float ticks = (float) SDL_GetTicks() / 1000.0F; // get the current number of ticks
+    delta_time = ticks - g_previous_ticks; // the delta time is the difference from the last frame
+    g_previous_ticks = ticks;
+}
+
+const float INIT_TRIANGLE_ANGLE = glm::radians(23.5);
 
 void update()
 {
+    // ——————————— YOUR ORBIT TRANSFORMATIONS SHOULD GO HERE ——————————— //
+    timer();    //makes sure delta time is flowing
+    x_pos+=speed*delta_time;    //intuitive: distance = speed * time
+    y_pos+=speed*delta_time;
 
-    glm::vec3 scale_vector;
-    g_frame_counter += 1;
+//    g_model_matrix = glm::mat4(1.0f);
+//    g_model_matrix = glm::translate(g_model_matrix, glm::vec3 (radius*cos(x_pos), radius*sin(y_pos),0.0f));
 
-    if (g_frame_counter >= MAX_FRAMES)
-    {
-        g_is_growing = !g_is_growing;
-        g_frame_counter = 0;
-    }
 
-    scale_vector = glm::vec3(g_is_growing ? GROWTH_FACTOR : SHRINK_FACTOR,
-                             g_is_growing ? GROWTH_FACTOR : SHRINK_FACTOR,
-                             1.0f);
+    g_player_position += g_player_movement * speed * delta_time;   //
+    //
+    g_model_matrix = glm::mat4(1.0f);                                       //
+//    g_model_matrix = glm::translate(g_model_matrix, g_player_position);
+    g_model_matrix = glm::translate(g_model_matrix, glm::vec3(orthoX,orthoY,0.0f));
+    g_model_matrix = glm::rotate(g_model_matrix, INIT_TRIANGLE_ANGLE, glm::vec3(0.0f, 0.0f, 1.0f));
+    g_satellite_matrix = glm::mat4(1.0f);
+    g_satellite_matrix = glm::translate(g_model_matrix, glm::vec3 (2.0f * radius*cos(x_pos), radius*sin(y_pos),0.0f));
+    g_satellite_matrix = glm::scale(g_satellite_matrix, glm::vec3 (0.8f,0.8f,0.8f));    //scale it down
 
-    g_model_matrix = glm::translate(g_model_matrix, glm::vec3(TRAN_VALUE, 0.0f, 0.0f));
-    g_model_matrix = glm::rotate(g_model_matrix, ROT_ANGLE, glm::vec3(0.0f, 1.0f, 0.0f));
-    g_model_matrix = glm::scale(g_model_matrix, scale_vector);
+    g_sub_satellite_matrix = glm::mat4(1.0f);
+    g_sub_satellite_matrix = glm::translate(g_satellite_matrix, glm::vec3 (radius*cos(2.0f*x_pos), radius*sin(2.0f*y_pos),0.0f));
+    g_sub_satellite_matrix = glm::scale(g_sub_satellite_matrix, glm::vec3 (0.5f,0.5f,0.5f));    //scale it down
+
+    // ————————————————————————————————————————————————————————————————— //
 }
 
-//void update_test()
-//{
-//    glm::vec3 scale_vector;
+//void render() {
+//    glClear(GL_COLOR_BUFFER_BIT);
 //
-//    scale_vector = glm::vec3(1.001f,
-//                             1.001f,
-//                             1.0f);
-
-//    g_model_matrix = glm::scale(g_model_matrix, scale_vector);
+//    g_shader_program.set_model_matrix(g_model_matrix);
 //
+//    float vertices[] =
+//            {
+//                    0.5f, -0.5f,
+//                    0.0f,  0.5f,
+//                    -0.5f, -0.5f
+//            };
+//
+//    glVertexAttribPointer(g_shader_program.get_position_attribute(), 2, GL_FLOAT, false, 0, vertices);
+//    glEnableVertexAttribArray(g_shader_program.get_position_attribute());
+//    glDrawArrays(GL_TRIANGLES, 0, 3);
+//    glDisableVertexAttribArray(g_shader_program.get_position_attribute());
+//
+//    SDL_GL_SwapWindow(g_display_window);
 //}
 
-//void update_test2()
-//{
-//    g_triangle_rot += 0.01f;
-//    g_triangle_x_pos += 0.01f;
-//    scale_vector = glm::vec3(1.001f,
-//                             1.001f,
-//                             1.0f);
-//
-//    g_model_matrix = glm::scale(g_model_matrix, scale_vector);
-//
-//}
+
 
 void render() {
     glClear(GL_COLOR_BUFFER_BIT);
 
-    g_shader_program.set_model_matrix(g_model_matrix);
-
     float vertices[] =
             {
-                    1.0f, -0.5f,
-                    0.0f,  0.5f,
-                    -0.5f, -0.5f
+                    -0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f,  // triangle 1
+                    -0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f,   // triangle 2
+                    -0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f   // triangle 3
             };
 
     glVertexAttribPointer(g_shader_program.get_position_attribute(), 2, GL_FLOAT, false, 0, vertices);
     glEnableVertexAttribArray(g_shader_program.get_position_attribute());
-    glDrawArrays(GL_TRIANGLES, 0, 3);
+
+    float texture_coordinates[] =
+            {
+                    0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f,     // triangle 1
+                    0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f,     // triangle 2
+            };
+
+    glVertexAttribPointer(g_shader_program.get_tex_coordinate_attribute(), 2, GL_FLOAT, false, 0, texture_coordinates);
+    glEnableVertexAttribArray(g_shader_program.get_tex_coordinate_attribute());
+// Object 1:
+    g_shader_program.set_model_matrix(g_model_matrix);
+
+//    glBindTexture(GL_TEXTURE_2D, g_basketball_texture_id);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+// Object 2:
+    g_shader_program.set_model_matrix(g_satellite_matrix);
+
+//    glBindTexture(GL_TEXTURE_2D, g_knicks_texture_id);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+//object3
+    g_shader_program.set_model_matrix(g_sub_satellite_matrix);
+
+//    glBindTexture(GL_TEXTURE_2D, g_knicks_texture_id);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+
     glDisableVertexAttribArray(g_shader_program.get_position_attribute());
-    //the above 4 lines create the triangle
+    glDisableVertexAttribArray(g_shader_program.get_tex_coordinate_attribute());
 
     SDL_GL_SwapWindow(g_display_window);
 }
+
+
+
 
 void shutdown() { SDL_Quit(); }
 
@@ -231,26 +328,15 @@ void shutdown() { SDL_Quit(); }
  */
 int main(int argc, char* argv[])
 {
-    // Initialise our program—whatever that means
     initialise();
 
     while (g_game_is_running)
     {
-        process_input();  // If the player did anything—press a button, move the joystick—process it
-        update();         // Using the game's previous state, and whatever new input we have, update the game's state
-//        update_test();
-        render();         // Once updated, render those changes onto the screen
+        process_input();
+        update();
+        render();
     }
 
-    shutdown();  // The game is over, so let's perform any shutdown protocols
+    shutdown();
     return 0;
 }
-
-
-/*
- * observations sofa:
- *  1.cannot use namespace anymore cuz now glm is also a namespace
- *  2. we do not have a Unity equiv of delta time yet,
- *  so all updates are subject to fluctuation.
- *  we will implement delta time eventually
- */
