@@ -295,7 +295,7 @@ void timer(){
     g_previous_ticks = ticks;
 }
 
-const float INIT_TRIANGLE_ANGLE = glm::radians(23.5);
+float INIT_TRIANGLE_ANGLE = glm::radians(23.5);
 
 void update()
 {
@@ -303,7 +303,7 @@ void update()
     timer();    //makes sure delta time is flowing
     x_pos+=speed*delta_time;    //intuitive: distance = speed * time
     y_pos+=speed*delta_time;
-
+    INIT_TRIANGLE_ANGLE = glm::radians(x_pos*18.0f);
 //    g_model_matrix = glm::mat4(1.0f);
 //    g_model_matrix = glm::translate(g_model_matrix, glm::vec3 (radius*cos(x_pos), radius*sin(y_pos),0.0f));
 
