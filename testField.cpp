@@ -36,6 +36,7 @@
 #include "include/glm/gtc/matrix_transform.hpp"  // Matrix transformation methods
 #include "include/ShaderProgram.h"               // We'll talk about these later in the course
 
+#define LOG(argument) std::cout << argument << '\n'
 
 const char V_SHADER_PATH[] ="/home/ren/projects/myGames/include/shaders/vertex.glsl",
         F_SHADER_PATH[] = "/home/ren/projects/myGames/include/shaders/fragment.glsl";
@@ -70,7 +71,6 @@ glm::mat4 g_view_matrix,
         g_sub_satellite_matrix, //this the object that orbits the orbiting project
         g_projection_matrix;
 
-
 // ——————————— GLOBAL VARS AND CONSTS FOR TRANSFORMATIONS ——————————— //
 
 float delta_time;
@@ -84,10 +84,62 @@ const float radius = 2.0f;
 glm::vec3 g_player_position = glm::vec3(0.0f, 0.0f, 0.0f);     //
 glm::vec3 g_player_movement = glm::vec3(0.0f, 0.0f, 0.0f);
 
+//below is texture stuff
+
+const int NUMBER_OF_TEXTURES = 1; // to be generated, that is
+const GLint LEVEL_OF_DETAIL = 0;  // base image level; Level n is the nth mipmap reduction image
+const GLint TEXTURE_BORDER = 0;   // this value MUST be zero
+
+//const char EARTH_FILEPATH[] = "include/assets/Earth.jpeg";
+const char EARTH_FILEPATH[] = "/home/ren/projects/myGames/include/assets/Earth.jpeg";
+
+//const char SUN_FILEPATH[] = "include/assets/Sun.jpeg";
+const char SUN_FILEPATH[] = "/home/ren/projects/myGames/include/assets/Sun.png";
+
+//const char MOON_FILEPATH[] = "include/assets/Moon.jpeg";
+const char MOON_FILEPATH[] = "/home/ren/projects/myGames/include/assets/Moon.jpeg";
+
+GLuint g_earth_texture_id;
+GLuint g_sun_texture_id;
+GLuint g_moon_texture_id;
+
 // —————————————————————————————————————————————————————————————————— //
+
+
+GLuint load_texture(const char* filepath)
+{
+    // STEP 1: Loading the image file
+    int width, height, number_of_components;
+    unsigned char* image = stbi_load(filepath, &width, &height, &number_of_components, STBI_rgb_alpha);
+
+    if (image == NULL)
+    {
+        LOG("Unable to load image. Make sure the path is correct.");
+        LOG(filepath);
+        assert(false);
+    }
+
+    // STEP 2: Generating and binding a texture ID to our image
+    GLuint textureID;
+    glGenTextures(NUMBER_OF_TEXTURES, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    glTexImage2D(GL_TEXTURE_2D, LEVEL_OF_DETAIL, GL_RGBA, width, height, TEXTURE_BORDER, GL_RGBA, GL_UNSIGNED_BYTE, image);
+
+    // STEP 3: Setting our texture filter parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    // STEP 4: Releasing our file from memory and returning our texture id
+    stbi_image_free(image);
+
+    return textureID;
+}
+
+
 
 void initialise()
 {
+//    SDL_Init(SDL_INIT_VIDEO);
     SDL_Init(SDL_INIT_VIDEO);
     g_display_window = SDL_CreateWindow("Homework1 on Steroid",
                                         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
@@ -120,6 +172,16 @@ void initialise()
     glUseProgram(g_shader_program.get_program_id());
 
     glClearColor(BG_RED, BG_BLUE, BG_GREEN, BG_OPACITY);
+
+    g_earth_texture_id = load_texture(EARTH_FILEPATH);
+    g_sun_texture_id = load_texture(SUN_FILEPATH);
+    g_moon_texture_id = load_texture(MOON_FILEPATH);
+
+//    LOG(g_earth_texture_id);
+
+    // enable blending
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 
@@ -284,6 +346,14 @@ void update()
 //}
 
 
+void draw_object(glm::mat4 &object_model_matrix, GLuint &object_texture_id)
+{
+    g_shader_program.set_model_matrix(object_model_matrix);
+    glBindTexture(GL_TEXTURE_2D, object_texture_id);
+//    LOG(GL_TEXTURE_2D);
+    glDrawArrays(GL_TRIANGLES, 0, 6); // we are now drawing 2 triangles, so we use 6 instead of 3
+}
+
 
 void render() {
     glClear(GL_COLOR_BUFFER_BIT);
@@ -292,11 +362,9 @@ void render() {
             {
                     -0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f,  // triangle 1
                     -0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f,   // triangle 2
-                    -0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f   // triangle 3
             };
 
-    glVertexAttribPointer(g_shader_program.get_position_attribute(), 2, GL_FLOAT, false, 0, vertices);
-    glEnableVertexAttribArray(g_shader_program.get_position_attribute());
+
 
     float texture_coordinates[] =
             {
@@ -304,24 +372,30 @@ void render() {
                     0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f,     // triangle 2
             };
 
+    glVertexAttribPointer(g_shader_program.get_position_attribute(), 2, GL_FLOAT, false, 0, vertices);
+    glEnableVertexAttribArray(g_shader_program.get_position_attribute());
+
     glVertexAttribPointer(g_shader_program.get_tex_coordinate_attribute(), 2, GL_FLOAT, false, 0, texture_coordinates);
     glEnableVertexAttribArray(g_shader_program.get_tex_coordinate_attribute());
 // Object 1:
-    g_shader_program.set_model_matrix(g_model_matrix);
+//    g_shader_program.set_model_matrix(g_model_matrix);
 
-//    glBindTexture(GL_TEXTURE_2D, g_basketball_texture_id);
-    glDrawArrays(GL_TRIANGLES, 0, 6);
+    draw_object(g_model_matrix, g_sun_texture_id);
+//    glBindTexture(GL_TEXTURE_2D, g_AAAAA_texture_id);
+//    glDrawArrays(GL_TRIANGLES, 0, 6);
 // Object 2:
-    g_shader_program.set_model_matrix(g_satellite_matrix);
+//    g_shader_program.set_model_matrix(g_satellite_matrix);
 
-//    glBindTexture(GL_TEXTURE_2D, g_knicks_texture_id);
-    glDrawArrays(GL_TRIANGLES, 0, 6);
+    draw_object(g_satellite_matrix, g_earth_texture_id);
+//    glBindTexture(GL_TEXTURE_2D, g_BBBBB_texture_id);
+//    glDrawArrays(GL_TRIANGLES, 0, 6);
 
 //object3
-    g_shader_program.set_model_matrix(g_sub_satellite_matrix);
+//    g_shader_program.set_model_matrix(g_sub_satellite_matrix);
 
-//    glBindTexture(GL_TEXTURE_2D, g_knicks_texture_id);
-    glDrawArrays(GL_TRIANGLES, 0, 6);
+    draw_object(g_sub_satellite_matrix, g_moon_texture_id);
+//    glBindTexture(GL_TEXTURE_2D, g_BBBBB_texture_id);
+//    glDrawArrays(GL_TRIANGLES, 0, 6);
 
 
     glDisableVertexAttribArray(g_shader_program.get_position_attribute());
