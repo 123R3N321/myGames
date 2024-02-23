@@ -42,7 +42,7 @@ const char V_SHADER_PATH[] = "/home/ren/projects/myGames/include/shaders/vertex_
         F_SHADER_PATH[] = "/home/ren/projects/myGames/include/shaders/fragment_textured.glsl";
 
 const char PLAYER_SPRITE_FILEPATH[] = "/home/ren/projects/myGames/include/assets/Sun.png";
-const char OTHER[] = "/home/ren/projects/myGames/include/assets/Sun.png";
+const char OTHER[] = "/home/ren/projects/myGames/include/assets/Earth.jpeg";
 
 /**
  * each new sprite requires a new id, it is simply an ind pos from 1 to infini, note that 0 is not used.
@@ -134,6 +134,12 @@ float orthoX, orthoY;
 ShaderProgram g_program;
 
 
+/**
+ * additional stuff for feb23 exercise
+ *
+ */
+ int mode = 1;
+int jump = 1;
 /**
  * This function is used to load the sprites, no future modification needed
  *
@@ -268,7 +274,16 @@ void process_input()
                 //
             case SDL_KEYDOWN:                                                //
                 switch (event.key.keysym.sym)                                //
-                {                                                            //                     //
+                {
+
+                    case SDLK_t:
+                        jump *= -1;
+                        break;
+                    case SDLK_r:
+                        mode*= -1;
+                        break;
+
+                    //                     //
                         //
                     case SDLK_q:                                             //
                         // Quit the game with a keystroke                    //
@@ -359,12 +374,16 @@ void update()
 //    g_model_matrix = glm::translate(g_model_matrix, glm::vec3(TRAN_VALUE, TRAN_VALUE, 0.0f));
     g_model_matrix = glm::rotate(g_model_matrix, ROT_ANGLE, glm::vec3(0.0f, 0.0f, 1.0f));
 
+    if(1==mode){
+        g_angle += ROT_SPEED;
+    }else if(-1==mode){
+        g_angle -= ROT_SPEED;
 
-    g_angle += ROT_SPEED;
+    }
     g_x_coords = RADIUS * glm::cos(g_angle);
     g_y_coords = RADIUS * glm::sin(g_angle);
 
-    other_model_matrix = glm::translate(g_model_matrix, glm::vec3(g_x_coords, g_y_coords, 0.0f));
+    other_model_matrix = glm::translate(g_model_matrix, glm::vec3(jump * g_x_coords, jump * g_y_coords, 0.0f));
 
 
 
