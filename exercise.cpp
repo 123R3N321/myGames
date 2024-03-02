@@ -38,12 +38,12 @@ const char V_SHADER_PATH[] = "/home/ren/projects/myGames/include/shaders/vertex_
         F_SHADER_PATH[] = "/home/ren/projects/myGames/include/shaders/fragment_textured.glsl";
 
 /**
- * Above is my header setup that i use for all my projects
+ * Above is my header setup that I use for all my projects
  */
 
 
-const int WINDOW_WIDTH  = 640,
-        WINDOW_HEIGHT = 480;
+const int WINDOW_WIDTH  = 1280,
+        WINDOW_HEIGHT = 960;
 
 const float BG_RED     = 0.9608f,
         BG_BLUE    = 0.9608f,
@@ -55,6 +55,7 @@ const int VIEWPORT_X      = 0,
         VIEWPORT_WIDTH  = WINDOW_WIDTH,
         VIEWPORT_HEIGHT = WINDOW_HEIGHT;
 
+// absolute path.
 const char FLOWER_SPRITE[] = "/home/ren/projects/myGames/include/assets/flower.png";
 
 const glm::vec3 FLOWER_INIT_POS = glm::vec3(0.0f, 0.0f, 0.0f),
@@ -94,7 +95,9 @@ As the notes from last class explain, in order efficiently translate objects in 
     A value that tells update by how much we want to move in any given direction per frame.
 
  */
-
+glm::vec3 g_player_position = glm::vec3(0.0f, 0.0f, 0.0f);   //the absolute coordinate position
+glm::vec3 g_player_movement = glm::vec3(0.0f, 0.0f, 0.0f);  //current movement
+float speedCap = glm::length(g_player_movement);                              //
 
 // ———————————————— PART 1 ———————————————— //
 
@@ -160,6 +163,7 @@ void initialise()
     glClearColor(BG_RED, BG_BLUE, BG_GREEN, BG_OPACITY);
 }
 
+int rotateDirection = 0;    //global var for rotation direction
 
 void process_input()
 {
@@ -187,9 +191,34 @@ To earn a bonus point for this exercise, you will add a
 
 For this part of the exercise, you should use keystrokes i
                  */
+                case SDL_KEYDOWN:                                                //
+                switch (event.key.keysym.sym)                                //
+                {
+
+                    case SDLK_r:
+                        rotateDirection = -1;
+                        break;
+                    case SDLK_c:
+                        rotateDirection = 1;
+                        break;
+                    case SDLK_s:
+                        rotateDirection = 0;
+                        break;
+
+                        //                     //
+                        //
+                    case SDLK_q:                                             //
+                        // Quit the game with a keystroke                    //
+                        g_game_is_running = false;                           //
+                        break;                                               //
+                        //
+                    default:                                                 //
+                        break;                                               //
+                }
 
                 // ———————————————— BONUS ———————————————— //
         }
+
     }
 
     // ———————————————— PART 2 ———————————————— //
@@ -212,6 +241,47 @@ Keep in mind that, if the user is moving in both the x- and y-direction,
  you will need to normalise this behaviour so that the sprite doesn't move faster than necessary.
  */
     // ———————————————— PART 2 ———————————————— //
+    // ––––––––––––––––––––––––––––––– KEY HOLD –––––––––––––––––––––––––––– //
+    //
+    g_player_movement = glm::vec3(0.0f);    //reset movement
+
+    const Uint8 *key_state = SDL_GetKeyboardState(NULL);                     //
+    //
+    if (key_state[SDL_SCANCODE_LEFT])                                        //
+    {                                                                        //
+        g_player_movement.x = -1.0f;                                         //
+    }                                                                        //
+    else if (key_state[SDL_SCANCODE_RIGHT])                                  //
+    {                                                                        //
+        g_player_movement.x = 1.0f;                                          //
+    }                                                                        //
+    //
+    if (key_state[SDL_SCANCODE_UP])                                          //
+    {                                                                        //
+        g_player_movement.y = 1.0f;                                          //
+    }                                                                        //
+    else if (key_state[SDL_SCANCODE_DOWN])                                   //
+    {                                                                        //
+        g_player_movement.y = -1.0f;                                         //
+    }                                                                        //
+    //
+    // This makes sure that the player can't "cheat" their way into moving   //
+    // faster, normalize direction vectors to always be unit vector.
+    if (speedCap > 1.0f)                               //
+    {                                                                        //
+        g_player_movement = glm::normalize(g_player_movement);               //
+    }
+
+}
+
+/*
+ * A function to rpevent overflow of float value,
+ * overflowGuard(value to be handled, upper limit)
+ */
+void overflowGuard(float& value, float limit){ //modification in place
+    if (value>=limit || value <= -limit){
+        value = 0.0f;
+    }
 }
 
 
@@ -229,8 +299,18 @@ void update()
     g_flower_model_matrix = glm::mat4(1.0f);
     g_flower_model_matrix = glm::scale(g_flower_model_matrix, FLOWER_INIT_SCA);
 
+    g_player_position += g_player_movement * TRANS_SPEED * delta_time;   //
+    overflowGuard(g_player_position.x, 1000.0f);
+    overflowGuard(g_player_position.y, 500.0f);
+
+    g_flower_model_matrix = glm::translate(g_flower_model_matrix, g_player_position);
+
+//todo: this is interesting: must translate before rotate per frame, which is against my intuition.
     /** ———— ROTATING SPRITE ———— **/
-    g_flower_model_matrix = glm::rotate(g_flower_model_matrix, glm::radians(g_rot_angle), glm::vec3(0.0f, 1.0f, 0.0f));
+    g_rot_angle += delta_time * DEGREES_PER_SECOND;
+    overflowGuard(g_rot_angle, 360 * DEGREES_PER_SECOND);
+    g_flower_model_matrix = glm::rotate(g_flower_model_matrix, glm::radians(g_rot_angle), glm::vec3(0.0f, 1.0f, 0.0f)); //this is the spinning as shown in class
+    g_flower_model_matrix = glm::rotate(g_flower_model_matrix,glm::radians(rotateDirection* g_rot_angle),glm::vec3(0.0f, 0.0f, 1.0f));
     // ———————————————— PART 3 ———————————————— //
 //todo: transformation
 
