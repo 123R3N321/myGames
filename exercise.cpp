@@ -344,6 +344,7 @@ void render() {
     glDisableVertexAttribArray(g_flower_program.get_tex_coordinate_attribute());
 
     SDL_GL_SwapWindow(g_display_window);
+    std::cout<<"velo: "<<g_player_movement.y<<std::endl;
 }
 
 

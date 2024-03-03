@@ -54,7 +54,7 @@ GLuint other_texture_id;
  * similar to sprite id situation, each new object requires a new model matrix
  */
 glm::mat4 g_view_matrix, g_projection_matrix,
-            g_model_matrix, other_model_matrix; //here, add more model matrices for new objects
+            g_banzai_matrix, other_model_matrix; //here, add more model matrices for new objects
 
 
 #define LOG(argument) std::cout << argument << '\n'
@@ -126,7 +126,7 @@ const float ORTHO_WIDTH  = 7.5f,
  * orthoX, orthoY are adjusted positions from mouseX and mouseY, relative position of the game window.
  * only used by process_input()
  */
-glm::vec3 g_player_movement = glm::vec3(0.0f, 0.0f, 0.0f);
+glm::vec3 g_banzai_movement = glm::vec3(0.0f, 0.0f, 0.0f);
 int mouseX, mouseY;
 float orthoX, orthoY;
 
@@ -209,7 +209,7 @@ void initialise()
  * Initial positioning of model matrices is actually optional as we reset in update()
  * but if I want to improve update() and get rid of that cumbersome reset every frame, i prolly need them here.
  */
-    g_model_matrix = glm::mat4(1.0f);
+    g_banzai_matrix = glm::mat4(1.0f);
     other_model_matrix = glm::mat4(1.0f);
 
 
@@ -250,7 +250,7 @@ float get_screen_to_ortho(float coordinate, Coordinate axis)
 
 void process_input()
 {
-    g_player_movement = glm::vec3(0.0f);
+    g_banzai_movement = glm::vec3(0.0f);
 
     SDL_GetMouseState(&mouseX, &mouseY);
     orthoX = get_screen_to_ortho(mouseX, X_COORDINATE);
@@ -307,27 +307,27 @@ void process_input()
     //
     if (key_state[SDL_SCANCODE_LEFT])                                        //
     {                                                                        //
-        g_player_movement.x = -1.0f;                                         //
+        g_banzai_movement.x = -1.0f;                                         //
     }                                                                        //
     else if (key_state[SDL_SCANCODE_RIGHT])                                  //
     {                                                                        //
-        g_player_movement.x = 1.0f;                                          //
+        g_banzai_movement.x = 1.0f;                                          //
     }                                                                        //
     //
     if (key_state[SDL_SCANCODE_UP])                                          //
     {                                                                        //
-        g_player_movement.y = 1.0f;                                          //
+        g_banzai_movement.y = 1.0f;                                          //
     }                                                                        //
     else if (key_state[SDL_SCANCODE_DOWN])                                   //
     {                                                                        //
-        g_player_movement.y = -1.0f;                                         //
+        g_banzai_movement.y = -1.0f;                                         //
     }                                                                        //
     //
     // This makes sure that the player can't "cheat" their way into moving   //
     // faster, normalize direction vectors to always be unit vector.                                                                //
-    if (glm::length(g_player_movement) > 1.0f)                               //
+    if (glm::length(g_banzai_movement) > 1.0f)                               //
     {                                                                        //
-        g_player_movement = glm::normalize(g_player_movement);               //
+        g_banzai_movement = glm::normalize(g_banzai_movement);               //
     }                                                                        //
     // ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––– //
 }
@@ -343,7 +343,7 @@ float speed = 2.0f;
 
 const float radius = 2.0f;
 
-glm::vec3 g_player_position = glm::vec3(0.0f, 0.0f, 0.0f);     //
+glm::vec3 g_banzai_position = glm::vec3(0.0f, 0.0f, 0.0f);     //
 
 
 void timer(){
@@ -358,7 +358,7 @@ void timer(){
 void update()
 {
     timer();    //makes sure delta time is flowing
-    g_player_position += g_player_movement * speed * delta_time;   //
+    g_banzai_position += g_banzai_movement * speed * delta_time;   //
 
     glm::vec3 scale_vector;
 
@@ -366,13 +366,13 @@ void update()
     scale_vector = glm::vec3(is_growing ? GROWTH_FACTOR : SHRINK_FACTOR,
                              is_growing ? GROWTH_FACTOR : SHRINK_FACTOR,
                              1.0f);
-    g_model_matrix =glm::scale(g_model_matrix, scale_vector);
+    g_banzai_matrix =glm::scale(g_banzai_matrix, scale_vector);
 
-    g_model_matrix = glm::mat4(1.0f);                                       //
-    g_model_matrix = glm::translate(g_model_matrix, glm::vec3(orthoX,orthoY,0.0f));
-    g_model_matrix = glm::translate(g_model_matrix, g_player_position);
+    g_banzai_matrix = glm::mat4(1.0f);                                       //
+    g_banzai_matrix = glm::translate(g_banzai_matrix, glm::vec3(orthoX, orthoY, 0.0f));
+    g_banzai_matrix = glm::translate(g_banzai_matrix, g_banzai_position);
 //    g_model_matrix = glm::translate(g_model_matrix, glm::vec3(TRAN_VALUE, TRAN_VALUE, 0.0f));
-    g_model_matrix = glm::rotate(g_model_matrix, ROT_ANGLE, glm::vec3(0.0f, 0.0f, 1.0f));
+    g_banzai_matrix = glm::rotate(g_banzai_matrix, ROT_ANGLE, glm::vec3(0.0f, 0.0f, 1.0f));
 
     if(1==mode){
         g_angle += ROT_SPEED;
@@ -383,7 +383,7 @@ void update()
     g_x_coords = RADIUS * glm::cos(g_angle);
     g_y_coords = RADIUS * glm::sin(g_angle);
 
-    other_model_matrix = glm::translate(g_model_matrix, glm::vec3(jump * g_x_coords, jump * g_y_coords, 0.0f));
+    other_model_matrix = glm::translate(g_banzai_matrix, glm::vec3(jump * g_x_coords, jump * g_y_coords, 0.0f));
 
 
 
@@ -424,7 +424,7 @@ void render() {
     glEnableVertexAttribArray(g_program.get_tex_coordinate_attribute());
 
     // Bind texture
-    draw_object(g_model_matrix, player_texture_id);
+    draw_object(g_banzai_matrix, player_texture_id);
     draw_object(other_model_matrix, other_texture_id);
 
     // We disable two attribute arrays now
