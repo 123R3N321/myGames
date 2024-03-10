@@ -89,6 +89,9 @@ const int NUMBER_OF_TEXTURES = 1;  // to be generated, that is
 const GLint LEVEL_OF_DETAIL  = 0;  // base image level; Level n is the nth mipmap reduction image
 const GLint TEXTURE_BORDER   = 0;  // this value MUST be zero
 
+
+int target;     //we have a random goal at beginning of game
+int endState;   //could be 0, running, 1, win, 2, lose via wrong landing, or 3, fallout
 // ————— VARIABLES ————— //
 GameState g_game_state;
 
@@ -103,6 +106,18 @@ float g_time_accumulator = 0.0f;
 
 const int FONTBANK_SIZE        = 16,
         FRAMES_PER_SECOND    = 4;
+
+int rand3(){    //create random int among 0, 1, 2, 3
+    std::random_device rd;
+    std::mt19937 gen(rd()); // Seed the random number generator
+
+    // Define a uniform distribution for integers between 0 and 3
+    std::uniform_int_distribution<> dist(0, 3);
+
+    // Generate a random integer between 0 and 3
+    return dist(gen);
+
+}
 
 void draw_text(ShaderProgram *program, GLuint font_texture_id, std::string text, float screen_size, float spacing, glm::vec3 position)
 {
@@ -197,6 +212,8 @@ GLuint load_texture(const char* filepath)
 
 void initialise()
 {
+    endState = 0;
+    target = rand3();
     SDL_Init(SDL_INIT_VIDEO);
     g_display_window = SDL_CreateWindow("George Lander",
                                         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
@@ -337,8 +354,48 @@ void process_input()
     }
 }
 
+
+void detectEndState(){
+    float vert = g_game_state.player->get_position().y;
+    float hori = g_game_state.player->get_position().x;
+
+    if(g_game_state.player->m_collided_bottom){ //we landed
+//        LOG("Landed.");
+        g_game_state.player->m_is_active = false;
+        LOG(endState);
+        if((hori<0.5 && 1==target)||(hori>-0.5 && 0==target)){
+            endState = 2;
+        }else if(fabs(hori)>0.5){
+            endState = 2;
+        }else{
+            endState = 1;   //win
+        }
+
+    }else{  //we just check if we flew too far
+        if(fabs(vert)>10 || fabs(hori)>20){
+            endState = 3;
+            g_game_state.player->m_is_active = false;
+        }
+    }
+}
+
+void endMsg() {
+    if (1 == endState) {    //win
+        draw_text(&g_shader_program, g_text_texture_id, std::string("Winner!"), 0.25f, 0.0f,
+                  glm::vec3(-1.00f, -1.0f, 0.0f));
+    } else if (2 == endState) { //offtarget
+        draw_text(&g_shader_program, g_text_texture_id, std::string("Off target, but at least you landed."), 0.25f, 0.0f,
+                  glm::vec3(-4.00f, -1.0f, 0.0f));
+    } else if (3 == endState) {
+        draw_text(&g_shader_program, g_text_texture_id, std::string("Into the abyss...DEAD!"), 0.25f, 0.0f,
+                  glm::vec3(-3.00f, -1.0f, 0.0f));
+    }
+}
+
 void update()
 {
+    detectEndState();
+//    LOG(g_game_state.player->get_position().x);
     // ————— DELTA TIME ————— //
     float ticks = (float)SDL_GetTicks() / MILLISECONDS_IN_SECOND; // get the current number of ticks
     float delta_time = ticks - g_previous_ticks; // the delta time is the difference from the last frame
@@ -366,6 +423,33 @@ void update()
     g_time_accumulator = delta_time;
 }
 
+std::string instruction(){
+    if (0==target){ //25% land to left
+        return("Land onto the left !");
+    }else if(1 == target){  //25% land to right
+        return("Land onto the right !");
+    }else{  //2 and 3, 50% chance, the easy target
+        return("Land onto the middle !");
+    }
+}
+
+std::string guide(){
+    std::string msg;
+    float playerVal = g_game_state.player->get_position().x;  //cut off is -1.2:-0.5  -0.5:0.5    0.5:1.2
+    if(playerVal<0.5 && 1 == target){   //need to go left
+        msg = "move to left!";
+    }else if(playerVal>-0.5 && 0 == target){
+        msg = "steer to the right, captain!";
+    } else{
+        if(fabs(playerVal)>1.2){
+            msg = "we are off the edge! Danger! Danger!";
+        }else{
+            msg = "Maintain this...steady...";
+        }
+    }
+    return msg;
+}
+
 void render()
 {
     // ————— GENERAL ————— //
@@ -373,8 +457,9 @@ void render()
 
 
     //---text---//
-    draw_text(&g_shader_program, g_text_texture_id, std::string("George Lander lmao"), 0.25f, 0.0f, glm::vec3(-2.00f, 2.0f, 0.0f));
-
+    draw_text(&g_shader_program, g_text_texture_id, std::string(instruction()), 0.25f, 0.0f, glm::vec3(-2.00f, 2.0f, 0.0f));
+    draw_text(&g_shader_program, g_text_texture_id, std::string(guide()), 0.25f, 0.0f, glm::vec3(-4.00f, 1.5f, 0.0f));
+    endMsg();
     // ————— PLAYER ————— //
     g_game_state.player->render(&g_shader_program);
 
