@@ -107,6 +107,9 @@ float g_time_accumulator = 0.0f;
 const int FONTBANK_SIZE        = 16,
         FRAMES_PER_SECOND    = 4;
 
+
+int fuel = 9999;
+
 int rand3(){    //create random int among 0, 1, 2, 3
     std::random_device rd;
     std::mt19937 gen(rd()); // Seed the random number generator
@@ -287,6 +290,10 @@ void initialise()
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
+void burnFuel(int speed){
+    fuel -= speed;
+}
+
 void process_input()
 {
     // VERY IMPORTANT: If nothing is pressed, we don't want to go anywhere
@@ -325,25 +332,29 @@ void process_input()
 
     const Uint8* key_state = SDL_GetKeyboardState(NULL);
 
-    if (key_state[SDL_SCANCODE_LEFT])
+    if (key_state[SDL_SCANCODE_LEFT] && (fuel>0))
     {
         g_game_state.player->propel('l');
+        burnFuel(3);
         g_game_state.player->m_animation_indices = g_game_state.player->m_walking[g_game_state.player->LEFT];
     }
-    else if (key_state[SDL_SCANCODE_RIGHT])
+    else if (key_state[SDL_SCANCODE_RIGHT] && (fuel>0))
     {
         g_game_state.player->propel('r');
+        burnFuel(3);
         g_game_state.player->m_animation_indices = g_game_state.player->m_walking[g_game_state.player->RIGHT];
     }
 
-    if (key_state[SDL_SCANCODE_UP])
+    if (key_state[SDL_SCANCODE_UP] && (fuel>0))
     {
         g_game_state.player->propel('u');
+        burnFuel(10);
         g_game_state.player->m_animation_indices = g_game_state.player->m_walking[g_game_state.player->UP];
     }
-    else if (key_state[SDL_SCANCODE_DOWN])
+    else if (key_state[SDL_SCANCODE_DOWN] && (fuel>0))
     {
         g_game_state.player->propel('d');
+        burnFuel(1);
         g_game_state.player->m_animation_indices = g_game_state.player->m_walking[g_game_state.player->DOWN];
     }
 
@@ -365,7 +376,7 @@ void detectEndState(){
         LOG(endState);
         if((hori<0.5 && 1==target)||(hori>-0.5 && 0==target)){
             endState = 2;
-        }else if(fabs(hori)>0.5){
+        }else if(fabs(hori)>1){
             endState = 2;
         }else{
             endState = 1;   //win
@@ -391,10 +402,10 @@ void endMsg() {
                   glm::vec3(-3.00f, -1.0f, 0.0f));
     }
 }
-
+int frame = 0;
 void update()
 {
-    detectEndState();
+
 //    LOG(g_game_state.player->get_position().x);
     // ————— DELTA TIME ————— //
     float ticks = (float)SDL_GetTicks() / MILLISECONDS_IN_SECOND; // get the current number of ticks
@@ -404,7 +415,7 @@ void update()
     // ————— FIXED TIMESTEP ————— //
     // STEP 1: Keep track of how much time has passed since last step
     delta_time += g_time_accumulator;
-
+    detectEndState();
     // STEP 2: Accumulate the ammount of time passed while we're under our fixed timestep
     if (delta_time < FIXED_TIMESTEP)
     {
@@ -421,6 +432,10 @@ void update()
     }
 
     g_time_accumulator = delta_time;
+
+    if (0==fuel){
+        g_game_state.player->m_is_active=false;
+    }
 }
 
 std::string instruction(){
@@ -437,9 +452,9 @@ std::string guide(){
     std::string msg;
     float playerVal = g_game_state.player->get_position().x;  //cut off is -1.2:-0.5  -0.5:0.5    0.5:1.2
     if(playerVal<0.5 && 1 == target){   //need to go left
-        msg = "move to left!";
+        msg = "move to the right!";
     }else if(playerVal>-0.5 && 0 == target){
-        msg = "steer to the right, captain!";
+        msg = "steer to the left, captain!";
     } else{
         if(fabs(playerVal)>1.2){
             msg = "we are off the edge! Danger! Danger!";
@@ -457,6 +472,8 @@ void render()
 
 
     //---text---//
+    draw_text(&g_shader_program, g_text_texture_id, std::string("Fuel Remaining: "), 0.25f, 0.0f, glm::vec3(-4.00f, 3.0f, 0.0f));
+    draw_text(&g_shader_program, g_text_texture_id, std::string(std::to_string(fuel)), 0.25f, 0.0f, glm::vec3(-4.00f, 2.8f, 0.0f));
     draw_text(&g_shader_program, g_text_texture_id, std::string(instruction()), 0.25f, 0.0f, glm::vec3(-2.00f, 2.0f, 0.0f));
     draw_text(&g_shader_program, g_text_texture_id, std::string(guide()), 0.25f, 0.0f, glm::vec3(-4.00f, 1.5f, 0.0f));
     endMsg();
