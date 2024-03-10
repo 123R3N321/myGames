@@ -4,10 +4,28 @@ I will try to make this into a framework
 
 #define GL_SILENCE_DEPRECATION
 #define STB_IMAGE_IMPLEMENTATION
+#define GL_GLEXT_PROTOTYPES 1
+#define NUMBER_OF_ENEMIES 3
+#define FIXED_TIMESTEP 0.0166666f
+#define ACC_OF_GRAVITY -9.81f
+#define PLATFORM_COUNT 3
 
 #ifdef _WINDOWS
 #include <GL/glew.h>
 #endif
+
+#include <SDL.h>
+#include <SDL_opengl.h>
+#include "include/glm/mat4x4.hpp"
+#include "include/glm/gtc/matrix_transform.hpp"
+#include "include/ShaderProgram.h"
+#include "include/stb_image.h"
+#include "cmath"
+#include <ctime>
+#include <vector>
+#include "Entity.h"
+
+#include <random>
 
 /**
  * below is a convenient debug tool
@@ -24,13 +42,6 @@ I will try to make this into a framework
  **/
 
 
-#define GL_GLEXT_PROTOTYPES 1
-#include "SDL2/SDL.h"
-#include "SDL2/SDL_opengl.h"
-#include "include/glm/mat4x4.hpp"
-#include "include/glm/gtc/matrix_transform.hpp"
-#include "include/ShaderProgram.h"
-#include "include/stb_image.h"
 
 /**
  * in the future we could change shaders
@@ -44,113 +55,121 @@ const char V_SHADER_PATH[] = "/home/ren/projects/myGames/include/shaders/vertex_
 const char PLAYER_SPRITE_FILEPATH[] = "/home/ren/projects/myGames/include/assets/Sun.png";
 const char OTHER[] = "/home/ren/projects/myGames/include/assets/Earth.jpeg";
 
-/**
- * each new sprite requires a new id, it is simply an ind pos from 1 to infini, note that 0 is not used.
- */
-GLuint player_texture_id;
-GLuint other_texture_id;
+const char  SPRITESHEET_FILEPATH[]  = "/home/ren/projects/myGames/include/assets/george_0.png",
+        PLATFORM_FILEPATH[]     = "/home/ren/projects/myGames/include/assets/platformPack_tile027.png",
+        FONT_SPRITE_FILEPATH[]   = "/home/ren/projects/myGames/include/assets/font1.png";
 
-/**
- * similar to sprite id situation, each new object requires a new model matrix
- */
-glm::mat4 g_view_matrix, g_projection_matrix,
-            g_banzai_matrix, other_model_matrix; //here, add more model matrices for new objects
+GLuint  g_text_texture_id;
 
+// ————— STRUCTS AND ENUMS —————//
+struct GameState
+{
+    Entity* player;
+    Entity* platforms;
+};
 
-#define LOG(argument) std::cout << argument << '\n'
+// ————— CONSTANTS ————— //
+const int WINDOW_WIDTH = 640,
+        WINDOW_HEIGHT = 480;
 
-
-/**
-Instead of putting all global variables together on top, I will
- only declare them immediately before they are needed for a function
- this is thus more readable and easier to trace
- **/
-const char WINDOW_TITLE[] = "No Title";
-
-const int WINDOW_WIDTH  = 1280,
-        WINDOW_HEIGHT = 960;
-
-const float  BG_RED = 0.0f,
-        BG_BLUE = 0.0f,
-        BG_GREEN = 0.0f,
+const float BG_RED = 0.5f,
+        BG_BLUE = 0.5f,
+        BG_GREEN = 0.5f,
         BG_OPACITY = 1.0f;
 
 const int VIEWPORT_X = 0,
         VIEWPORT_Y = 0,
-        VIEWPORT_WIDTH  = WINDOW_WIDTH,
+        VIEWPORT_WIDTH = WINDOW_WIDTH,
         VIEWPORT_HEIGHT = WINDOW_HEIGHT;
 
 
-const float MINIMUM_COLLISION_DISTANCE = 1.0f;
+const float MILLISECONDS_IN_SECOND  = 1000.0;
 
-const float RADIUS = 2.0f;      // radius of circle
-const float ROT_SPEED = 0.01f;  // rotational speed
-const float ROT_ANGLE = glm::radians(1.5f);
-const float TRAN_VALUE = 0.01f;
-
-float g_angle    = 0.0f;        // current angle accumulated
-float g_x_coords = RADIUS;      // current x-coord
-float g_y_coords = 0.0f;
-
-const float GROWTH_FACTOR = 1.01f;  // grow by 1.0% / frame
-const float SHRINK_FACTOR = 0.99f;  // grow by -1.0% / frame
-
-
-SDL_Window* display_window;
-bool g_game_is_running = true;
-bool is_growing = true;
-
-const int NUMBER_OF_TEXTURES = 1; // to be generated, that is
+const int NUMBER_OF_TEXTURES = 1;  // to be generated, that is
 const GLint LEVEL_OF_DETAIL  = 0;  // base image level; Level n is the nth mipmap reduction image
-const GLint TEXTURE_BORDER   = 0;   // this value MUST be zero
+const GLint TEXTURE_BORDER   = 0;  // this value MUST be zero
+
+// ————— VARIABLES ————— //
+GameState g_game_state;
+
+SDL_Window* g_display_window;
+bool g_game_is_running = true;
+
+ShaderProgram g_shader_program;
+glm::mat4 g_view_matrix, g_projection_matrix;
+
+float g_previous_ticks = 0.0f;
+float g_time_accumulator = 0.0f;
+
+const int FONTBANK_SIZE        = 16,
+        FRAMES_PER_SECOND    = 4;
+
+void draw_text(ShaderProgram *program, GLuint font_texture_id, std::string text, float screen_size, float spacing, glm::vec3 position)
+{
+    // Scale the size of the fontbank in the UV-plane
+    // We will use this for spacing and positioning
+    float width = 1.0f / FONTBANK_SIZE;
+    float height = 1.0f / FONTBANK_SIZE;
+
+    // Instead of having a single pair of arrays, we'll have a series of pairs—one for each character
+    // Don't forget to include <vector>!
+    std::vector<float> vertices;
+    std::vector<float> texture_coordinates;
+
+    // For every character...
+    for (int i = 0; i < text.size(); i++) {
+        // 1. Get their index in the spritesheet, as well as their offset (i.e. their position
+        //    relative to the whole sentence)
+        int spritesheet_index = (int) text[i];  // ascii value of character
+        float offset = (screen_size + spacing) * i;
+
+        // 2. Using the spritesheet index, we can calculate our U- and V-coordinates
+        float u_coordinate = (float) (spritesheet_index % FONTBANK_SIZE) / FONTBANK_SIZE;
+        float v_coordinate = (float) (spritesheet_index / FONTBANK_SIZE) / FONTBANK_SIZE;
+
+        // 3. Inset the current pair in both vectors
+        vertices.insert(vertices.end(), {
+                offset + (-0.5f * screen_size), 0.5f * screen_size,
+                offset + (-0.5f * screen_size), -0.5f * screen_size,
+                offset + (0.5f * screen_size), 0.5f * screen_size,
+                offset + (0.5f * screen_size), -0.5f * screen_size,
+                offset + (0.5f * screen_size), 0.5f * screen_size,
+                offset + (-0.5f * screen_size), -0.5f * screen_size,
+        });
+
+        texture_coordinates.insert(texture_coordinates.end(), {
+                u_coordinate, v_coordinate,
+                u_coordinate, v_coordinate + height,
+                u_coordinate + width, v_coordinate,
+                u_coordinate + width, v_coordinate + height,
+                u_coordinate + width, v_coordinate,
+                u_coordinate, v_coordinate + height,
+        });
+    }
+
+    // 4. And render all of them using the pairs
+    glm::mat4 model_matrix = glm::mat4(1.0f);
+    model_matrix = glm::translate(model_matrix, position);
+
+    program->set_model_matrix(model_matrix);
+    glUseProgram(program->get_program_id());
+
+    glVertexAttribPointer(program->get_position_attribute(), 2, GL_FLOAT, false, 0, vertices.data());
+    glEnableVertexAttribArray(program->get_position_attribute());
+    glVertexAttribPointer(program->get_tex_coordinate_attribute(), 2, GL_FLOAT, false, 0, texture_coordinates.data());
+    glEnableVertexAttribArray(program->get_tex_coordinate_attribute());
+
+    glBindTexture(GL_TEXTURE_2D, font_texture_id);
+    glDrawArrays(GL_TRIANGLES, 0, (int) (text.size() * 6));
+
+    glDisableVertexAttribArray(program->get_position_attribute());
+    glDisableVertexAttribArray(program->get_tex_coordinate_attribute());
+}
 
 
-/**
- * x, y coordinate system used for tracking mouse cursor position
- * only used by process_input()
- */
-enum Coordinate { x_coordinate, y_coordinate };
-const Coordinate X_COORDINATE = x_coordinate;
-const Coordinate Y_COORDINATE = y_coordinate;
-
-/**
- * below variables only used for mouse hovering positioning adjustment
- * only used by get_screen_to_ortho() function
- */
-const float ORTHO_WIDTH  = 7.5f,
-        ORTHO_HEIGHT = 10.0f;
-
-/**
- * below variables are used for controlling movement and indicate cursor position
- * mouseX, mouseY are absolute mouse cursor positions on-screen
- * orthoX, orthoY are adjusted positions from mouseX and mouseY, relative position of the game window.
- * only used by process_input()
- */
-glm::vec3 g_banzai_movement = glm::vec3(0.0f, 0.0f, 0.0f);
-int mouseX, mouseY;
-float orthoX, orthoY;
-
-
-ShaderProgram g_program;
-
-
-/**
- * additional stuff for feb23 exercise
- *
- */
- int mode = 1;
-int jump = 1;
-/**
- * This function is used to load the sprites, no future modification needed
- *
- * @param Absolute filepath, in an array of char (char[])
- * @return id, which is positive int from 1 onwards
- * @ModificationInPlace function modifies underlying global variables provided by openGL
- */
-
+// ———— GENERAL FUNCTIONS ———— //
 GLuint load_texture(const char* filepath)
 {
-
     int width, height, number_of_components;
     unsigned char* image = stbi_load(filepath, &width, &height, &number_of_components, STBI_rgb_alpha);
 
@@ -160,40 +179,32 @@ GLuint load_texture(const char* filepath)
         assert(false);
     }
 
-
     GLuint textureID;
     glGenTextures(NUMBER_OF_TEXTURES, &textureID);
     glBindTexture(GL_TEXTURE_2D, textureID);
     glTexImage2D(GL_TEXTURE_2D, LEVEL_OF_DETAIL, GL_RGBA, width, height, TEXTURE_BORDER, GL_RGBA, GL_UNSIGNED_BYTE, image);
 
-
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
     stbi_image_free(image);
 
     return textureID;
 }
 
-
-
-/**
- * heavy modification needed for any future uses.
- * I will try to eliminate the need of modifying this function in the future
- * possibly need dynamic memory.(such as an array of texture inds on the heap)
- * @calledByMain
- */
 void initialise()
 {
     SDL_Init(SDL_INIT_VIDEO);
-    display_window = SDL_CreateWindow(WINDOW_TITLE,
-                                      SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                                      WINDOW_WIDTH, WINDOW_HEIGHT,
-                                      SDL_WINDOW_OPENGL);
+    g_display_window = SDL_CreateWindow("George Lander",
+                                        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+                                        WINDOW_WIDTH, WINDOW_HEIGHT,
+                                        SDL_WINDOW_OPENGL);
 
-    SDL_GLContext context = SDL_GL_CreateContext(display_window);
-    SDL_GL_MakeCurrent(display_window, context);
+    SDL_GLContext context = SDL_GL_CreateContext(g_display_window);
+    SDL_GL_MakeCurrent(g_display_window, context);
 
 #ifdef _WINDOWS
     glewInit();
@@ -201,242 +212,182 @@ void initialise()
 
     glViewport(VIEWPORT_X, VIEWPORT_Y, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 
-    g_program.load(V_SHADER_PATH, F_SHADER_PATH);
-
-
-
-/**
- * Initial positioning of model matrices is actually optional as we reset in update()
- * but if I want to improve update() and get rid of that cumbersome reset every frame, i prolly need them here.
- */
-    g_banzai_matrix = glm::mat4(1.0f);
-    other_model_matrix = glm::mat4(1.0f);
-
-
+    g_shader_program.load(V_SHADER_PATH, F_SHADER_PATH);
 
     g_view_matrix = glm::mat4(1.0f);
     g_projection_matrix = glm::ortho(-5.0f, 5.0f, -3.75f, 3.75f, -1.0f, 1.0f);
 
-    g_program.set_projection_matrix(g_projection_matrix);
-    g_program.set_view_matrix(g_view_matrix);
+    g_shader_program.set_projection_matrix(g_projection_matrix);
+    g_shader_program.set_view_matrix(g_view_matrix);
 
-    glUseProgram(g_program.get_program_id());
+    glUseProgram(g_shader_program.get_program_id());
 
     glClearColor(BG_RED, BG_BLUE, BG_GREEN, BG_OPACITY);
 
-    /**
-     * generate multiple indeces and load multiple textures.
-     * call additional load_texture() as long as you need more sprites
-     */
-    player_texture_id = load_texture(PLAYER_SPRITE_FILEPATH);
-    other_texture_id = load_texture(OTHER);
+    // ————— PLAYER ————— //
+    // Existing
+    g_game_state.player = new Entity();
+    g_game_state.player->set_position(glm::vec3(0.0f));
+    g_game_state.player->set_movement(glm::vec3(0.0f));
+    g_game_state.player->set_acceleration(glm::vec3(0.0f, ACC_OF_GRAVITY * 0.1, 0.0f));
+    g_game_state.player->set_speed(1.0f);
+    g_game_state.player->m_texture_id = load_texture(SPRITESHEET_FILEPATH);
 
-    // enable blending
+    // Walking
+    g_game_state.player->m_walking[g_game_state.player->LEFT]   = new int[4] { 1, 5, 9,  13 };
+    g_game_state.player->m_walking[g_game_state.player->RIGHT]  = new int[4] { 3, 7, 11, 15 };
+    g_game_state.player->m_walking[g_game_state.player->UP]     = new int[4] { 2, 6, 10, 14 };
+    g_game_state.player->m_walking[g_game_state.player->DOWN]   = new int[4] { 0, 4, 8,  12 };
+
+    g_game_state.player->m_animation_indices = g_game_state.player->m_walking[g_game_state.player->RIGHT];  // start George looking right
+    g_game_state.player->m_animation_frames  = 4;
+    g_game_state.player->m_animation_index   = 0;
+    g_game_state.player->m_animation_time    = 0.0f;
+    g_game_state.player->m_animation_cols    = 4;
+    g_game_state.player->m_animation_rows    = 4;
+    g_game_state.player->set_height(0.9f);
+    g_game_state.player->set_width(0.9f);
+
+    // Jumping
+    g_game_state.player->m_jumping_power = 3.0f;
+
+    // ————— PLATFORM ————— //
+    g_game_state.platforms = new Entity[PLATFORM_COUNT];
+
+    for (int i = 0; i < PLATFORM_COUNT; i++)
+    {
+        g_game_state.platforms[i].m_texture_id = load_texture(PLATFORM_FILEPATH);
+        g_game_state.platforms[i].set_position(glm::vec3(i - 1.0f, -3.0f, 0.0f));
+        g_game_state.platforms[i].update(0.0f, NULL, 0);
+    }
+
+
+    glUseProgram(g_shader_program.get_program_id());
+    g_text_texture_id = load_texture(FONT_SPRITE_FILEPATH);
+
+    // ————— GENERAL ————— //
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
-
-float get_screen_to_ortho(float coordinate, Coordinate axis)
-{
-    switch(axis)
-    {
-        case x_coordinate: return ((coordinate / WINDOW_WIDTH) * ORTHO_WIDTH) - (ORTHO_WIDTH / 2.0);
-        case y_coordinate: return (((WINDOW_HEIGHT - coordinate) / WINDOW_HEIGHT) * ORTHO_HEIGHT) - (ORTHO_HEIGHT / 2.0);
-        default          : return 0.0f;
-    }
-}
-
-
 void process_input()
 {
-    g_banzai_movement = glm::vec3(0.0f);
+    // VERY IMPORTANT: If nothing is pressed, we don't want to go anywhere
+    g_game_state.player->set_movement(glm::vec3(0.0f));
 
-    SDL_GetMouseState(&mouseX, &mouseY);
-    orthoX = get_screen_to_ortho(mouseX, X_COORDINATE);
-    orthoY = get_screen_to_ortho(mouseY, Y_COORDINATE);
+    SDL_Event event;
+    while (SDL_PollEvent(&event))
+    {
+        switch (event.type) {
+            // End game
+            case SDL_QUIT:
+            case SDL_WINDOWEVENT_CLOSE:
+                g_game_is_running = false;
+                break;
 
-
-    //
-    //
-    // –––––––––––––––––––––––-----– KEYSTROKES ---------––––––––––––––––––– //
-    //
-    SDL_Event event;                                                         //
-    while (SDL_PollEvent(&event))                                            //
-    {                                                                        //
-        switch (event.type)                                                  //
-        {                                                                    //
-            // End game                                                      //
-            case SDL_QUIT:                                                   //
-            case SDL_WINDOWEVENT_CLOSE:                                      //
-                g_game_is_running = false;                                   //
-                break;                                                       //
-                //
-            case SDL_KEYDOWN:                                                //
-                switch (event.key.keysym.sym)                                //
-                {
-
-                    case SDLK_t:
-                        jump *= -1;
-                        break;
-                    case SDLK_r:
-                        mode*= -1;
+            case SDL_KEYDOWN:
+                switch (event.key.keysym.sym) {
+                    case SDLK_q:
+                        // Quit the game with a keystroke
+                        g_game_is_running = false;
                         break;
 
-                    //                     //
-                        //
-                    case SDLK_q:                                             //
-                        // Quit the game with a keystroke                    //
-                        g_game_is_running = false;                           //
-                        break;                                               //
-                        //
-                    default:                                                 //
-                        break;                                               //
+                    case SDLK_SPACE:
+                        // Jump
+                        if (g_game_state.player->m_collided_bottom) g_game_state.player->m_is_jumping = true;
+                        break;
+
+                    default:
+                        break;
                 }
 
-                //
-                //
-            default:                                                         //
-                break;                                                       //
-        }                                                                    //
-    }                                                                        //
-    //
-    // ––––––––––––––––––––––––––––––– KEY HOLD –––––––––––––––––––––––––––– //
-    //
-    const Uint8 *key_state = SDL_GetKeyboardState(NULL);                     //
-    //
-    if (key_state[SDL_SCANCODE_LEFT])                                        //
-    {                                                                        //
-        g_banzai_movement.x = -1.0f;                                         //
-    }                                                                        //
-    else if (key_state[SDL_SCANCODE_RIGHT])                                  //
-    {                                                                        //
-        g_banzai_movement.x = 1.0f;                                          //
-    }                                                                        //
-    //
-    if (key_state[SDL_SCANCODE_UP])                                          //
-    {                                                                        //
-        g_banzai_movement.y = 1.0f;                                          //
-    }                                                                        //
-    else if (key_state[SDL_SCANCODE_DOWN])                                   //
-    {                                                                        //
-        g_banzai_movement.y = -1.0f;                                         //
-    }                                                                        //
-    //
-    // This makes sure that the player can't "cheat" their way into moving   //
-    // faster, normalize direction vectors to always be unit vector.                                                                //
-    if (glm::length(g_banzai_movement) > 1.0f)                               //
-    {                                                                        //
-        g_banzai_movement = glm::normalize(g_banzai_movement);               //
-    }                                                                        //
-    // ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––– //
+            default:
+                break;
+        }
+    }
+
+    const Uint8* key_state = SDL_GetKeyboardState(NULL);
+
+    if (key_state[SDL_SCANCODE_LEFT])
+    {
+        g_game_state.player->propel('l');
+        g_game_state.player->m_animation_indices = g_game_state.player->m_walking[g_game_state.player->LEFT];
+    }
+    else if (key_state[SDL_SCANCODE_RIGHT])
+    {
+        g_game_state.player->propel('r');
+        g_game_state.player->m_animation_indices = g_game_state.player->m_walking[g_game_state.player->RIGHT];
+    }
+
+    if (key_state[SDL_SCANCODE_UP])
+    {
+        g_game_state.player->propel('u');
+        g_game_state.player->m_animation_indices = g_game_state.player->m_walking[g_game_state.player->UP];
+    }
+    else if (key_state[SDL_SCANCODE_DOWN])
+    {
+        g_game_state.player->propel('d');
+        g_game_state.player->m_animation_indices = g_game_state.player->m_walking[g_game_state.player->DOWN];
+    }
+
+    // This makes sure that the player can't move faster diagonally
+    if (glm::length(g_game_state.player->get_movement()) > 1.0f)
+    {
+        g_game_state.player->set_movement(glm::normalize(g_game_state.player->get_movement()));
+    }
 }
-
-/**
- Uses distance formula.
- */
-
-
-float delta_time;
-float g_previous_ticks  = 0.0f;
-float speed = 2.0f;
-
-const float radius = 2.0f;
-
-glm::vec3 g_banzai_position = glm::vec3(0.0f, 0.0f, 0.0f);     //
-
-
-void timer(){
-    float ticks = (float) SDL_GetTicks() / 1000.0F; // get the current number of ticks
-    delta_time = ticks - g_previous_ticks; // the delta time is the difference from the last frame
-    g_previous_ticks = ticks;
-}
-
-
-
 
 void update()
 {
-    timer();    //makes sure delta time is flowing
-    g_banzai_position += g_banzai_movement * speed * delta_time;   //
+    // ————— DELTA TIME ————— //
+    float ticks = (float)SDL_GetTicks() / MILLISECONDS_IN_SECOND; // get the current number of ticks
+    float delta_time = ticks - g_previous_ticks; // the delta time is the difference from the last frame
+    g_previous_ticks = ticks;
 
-    glm::vec3 scale_vector;
+    // ————— FIXED TIMESTEP ————— //
+    // STEP 1: Keep track of how much time has passed since last step
+    delta_time += g_time_accumulator;
 
-
-    scale_vector = glm::vec3(is_growing ? GROWTH_FACTOR : SHRINK_FACTOR,
-                             is_growing ? GROWTH_FACTOR : SHRINK_FACTOR,
-                             1.0f);
-    g_banzai_matrix =glm::scale(g_banzai_matrix, scale_vector);
-
-    g_banzai_matrix = glm::mat4(1.0f);                                       //
-    g_banzai_matrix = glm::translate(g_banzai_matrix, glm::vec3(orthoX, orthoY, 0.0f));
-    g_banzai_matrix = glm::translate(g_banzai_matrix, g_banzai_position);
-//    g_model_matrix = glm::translate(g_model_matrix, glm::vec3(TRAN_VALUE, TRAN_VALUE, 0.0f));
-    g_banzai_matrix = glm::rotate(g_banzai_matrix, ROT_ANGLE, glm::vec3(0.0f, 0.0f, 1.0f));
-
-    if(1==mode){
-        g_angle += ROT_SPEED;
-    }else if(-1==mode){
-        g_angle -= ROT_SPEED;
-
+    // STEP 2: Accumulate the ammount of time passed while we're under our fixed timestep
+    if (delta_time < FIXED_TIMESTEP)
+    {
+        g_time_accumulator = delta_time;
+        return;
     }
-    g_x_coords = RADIUS * glm::cos(g_angle);
-    g_y_coords = RADIUS * glm::sin(g_angle);
 
-    other_model_matrix = glm::translate(g_banzai_matrix, glm::vec3(jump * g_x_coords, jump * g_y_coords, 0.0f));
+    // STEP 3: Once we exceed our fixed timestep, apply that elapsed time into the objects' update function invocation
+    while (delta_time >= FIXED_TIMESTEP)
+    {
+        // Notice that we're using FIXED_TIMESTEP as our delta time
+        g_game_state.player->update(FIXED_TIMESTEP, g_game_state.platforms, PLATFORM_COUNT);
+        delta_time -= FIXED_TIMESTEP;
+    }
 
-
-
-
-
-
-
+    g_time_accumulator = delta_time;
 }
 
-void draw_object(glm::mat4 &object_model_matrix, GLuint &object_texture_id)
+void render()
 {
-    g_program.set_model_matrix(object_model_matrix);
-    glBindTexture(GL_TEXTURE_2D, object_texture_id);
-    glDrawArrays(GL_TRIANGLES, 0, 6);
-
-}
-
-
-void render() {
+    // ————— GENERAL ————— //
     glClear(GL_COLOR_BUFFER_BIT);
 
-    // Vertices
-    float vertices[] = {
-            -0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f,  // triangle 1
-            -0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f   // triangle 2
-    };
 
-    // Textures
-    float texture_coordinates[] = {
-            0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f,     // triangle 1
-            0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f,     // triangle 2
-    };
+    //---text---//
+    draw_text(&g_shader_program, g_text_texture_id, std::string("George Lander lmao"), 0.25f, 0.0f, glm::vec3(-2.00f, 2.0f, 0.0f));
 
-    glVertexAttribPointer(g_program.get_position_attribute(), 2, GL_FLOAT, false, 0, vertices);
-    glEnableVertexAttribArray(g_program.get_position_attribute());
+    // ————— PLAYER ————— //
+    g_game_state.player->render(&g_shader_program);
 
-    glVertexAttribPointer(g_program.get_tex_coordinate_attribute(), 2, GL_FLOAT, false, 0, texture_coordinates);
-    glEnableVertexAttribArray(g_program.get_tex_coordinate_attribute());
+    // ————— PLATFORM ————— //
+    for (int i = 0; i < PLATFORM_COUNT; i++) g_game_state.platforms[i].render(&g_shader_program);
 
-    // Bind texture
-    draw_object(g_banzai_matrix, player_texture_id);
-    draw_object(other_model_matrix, other_texture_id);
-
-    // We disable two attribute arrays now
-    glDisableVertexAttribArray(g_program.get_position_attribute());
-    glDisableVertexAttribArray(g_program.get_tex_coordinate_attribute());
-
-    SDL_GL_SwapWindow(display_window);
+    // ————— GENERAL ————— //
+    SDL_GL_SwapWindow(g_display_window);
 }
 
 void shutdown() { SDL_Quit(); }
 
-
+// ————— DRIVER GAME LOOP ————— /
 int main(int argc, char* argv[])
 {
     initialise();

@@ -10,11 +10,13 @@ set(CMAKE_CXX_STANDARD 14)
 
 # Create the executable
 add_executable(myGames
-#        testField.cpp
+        testField.cpp
+        Entity.cpp
+        Entity.h
         include/ShaderProgram.h
         include/stb_image.h
         include/ShaderProgram.cpp
-        exercise.cpp
+#        exercise.cpp
 #        pong.cpp
 )
 
