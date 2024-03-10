@@ -56,8 +56,8 @@ build CMakeFiles/myGames.dir/include/ShaderProgram.cpp.o: CXX_COMPILER__myGames_
   OBJECT_DIR = CMakeFiles/myGames.dir
   OBJECT_FILE_DIR = CMakeFiles/myGames.dir/include
 
-build CMakeFiles/myGames.dir/pong.cpp.o: CXX_COMPILER__myGames_unscanned_Debug /home/ren/projects/myGames/pong.cpp || cmake_object_order_depends_target_myGames
-  DEP_FILE = CMakeFiles/myGames.dir/pong.cpp.o.d
+build CMakeFiles/myGames.dir/exercise.cpp.o: CXX_COMPILER__myGames_unscanned_Debug /home/ren/projects/myGames/exercise.cpp || cmake_object_order_depends_target_myGames
+  DEP_FILE = CMakeFiles/myGames.dir/exercise.cpp.o.d
   FLAGS = -g -std=gnu++14 -fdiagnostics-color=always
   INCLUDES = -I/usr/include/SDL2
   OBJECT_DIR = CMakeFiles/myGames.dir
@@ -71,7 +71,7 @@ build CMakeFiles/myGames.dir/pong.cpp.o: CXX_COMPILER__myGames_unscanned_Debug /
 #############################################
 # Link the executable myGames
 
-build myGames: CXX_EXECUTABLE_LINKER__myGames_Debug CMakeFiles/myGames.dir/include/ShaderProgram.cpp.o CMakeFiles/myGames.dir/pong.cpp.o | /usr/lib/x86_64-linux-gnu/libGLX.so /usr/lib/x86_64-linux-gnu/libOpenGL.so
+build myGames: CXX_EXECUTABLE_LINKER__myGames_Debug CMakeFiles/myGames.dir/include/ShaderProgram.cpp.o CMakeFiles/myGames.dir/exercise.cpp.o | /usr/lib/x86_64-linux-gnu/libGLX.so /usr/lib/x86_64-linux-gnu/libOpenGL.so
   FLAGS = -g
   LINK_LIBRARIES = -L/usr/lib/x86_64-linux-gnu  -lSDL2  /usr/lib/x86_64-linux-gnu/libGLX.so  /usr/lib/x86_64-linux-gnu/libOpenGL.so
   OBJECT_DIR = CMakeFiles/myGames.dir

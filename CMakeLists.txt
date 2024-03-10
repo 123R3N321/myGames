@@ -14,8 +14,8 @@ add_executable(myGames
         include/ShaderProgram.h
         include/stb_image.h
         include/ShaderProgram.cpp
-#        exercise.cpp
-        pong.cpp
+        exercise.cpp
+#        pong.cpp
 )
 
 # Include SDL2 headers for the executable
