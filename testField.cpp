@@ -69,8 +69,8 @@ struct GameState
 };
 
 // ————— CONSTANTS ————— //
-const int WINDOW_WIDTH = 640,
-        WINDOW_HEIGHT = 480;
+const int WINDOW_WIDTH = 1280,
+        WINDOW_HEIGHT = 960;
 
 const float BG_RED = 0.5f,
         BG_BLUE = 0.5f,
