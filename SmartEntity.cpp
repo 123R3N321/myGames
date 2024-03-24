@@ -107,11 +107,11 @@ void Entity::ai_guard(Entity* player)
         case WALKING:
             if (m_position.x > player->get_position().x) {
                 m_movement = glm::vec3(-1.0f, 0.0f, 0.0f);
-                LOG("we walkin from left");
+//                LOG("we walkin from left");
             }
             else {
                 m_movement = glm::vec3(1.0f, 0.0f, 0.0f);
-                LOG("we walkin from right");
+//                LOG("we walkin from right");
             }
             break;
 
