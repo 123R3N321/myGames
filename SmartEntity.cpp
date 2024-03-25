@@ -105,6 +105,7 @@ void Entity::ai_activate(Entity* player)
 void Entity::ai_walk()
 {
     m_movement = glm::vec3(-1.0f, 0.0f, 0.0f);
+
 }
 
 void Entity::ai_guard(Entity* player)
@@ -184,11 +185,11 @@ void Entity::ai_rush_toward(Entity* player){
 
         case RUSHING:
             if (m_position.x > player->get_position().x) {
-                m_acceleration += glm::vec3(-3.0f, 0.0f, 0.0f);
+                m_acceleration += glm::vec3(-1.0f, 0.0f, 0.0f);
 //                LOG("we walkin from left");
             }
             else {
-                m_acceleration += glm::vec3(3.0f, 0.0f, 0.0f);
+                m_acceleration += glm::vec3(1.0f, 0.0f, 0.0f);
 //                LOG("we walkin from right");
             }
             break;
@@ -399,6 +400,7 @@ void const Entity::check_collision_x(Map* map)
         m_position.x += penetration_x;
         m_velocity.x = 0;
         m_collided_left = true;
+
     }
     if (map->is_solid(right, &penetration_x, &penetration_y) && m_velocity.x > 0)
     {
@@ -406,6 +408,9 @@ void const Entity::check_collision_x(Map* map)
         m_velocity.x = -m_velocity.x;
 
         m_collided_right = true;
+        if(ENEMY == m_entity_type){
+            LOG("hello here!");
+        }
     }
 }
 

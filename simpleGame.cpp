@@ -281,7 +281,7 @@ void initialise()
     g_game_state.player->set_width(0.8f);
 
     // Jumping
-    g_game_state.player->m_jumping_power = 5.0f;
+    g_game_state.player->m_jumping_power = 6.0f;
 
 
     Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 4096);
@@ -313,6 +313,7 @@ void initialise()
     g_game_state.enemies[ind].set_movement(glm::vec3(0.0f));
     g_game_state.enemies[ind].set_speed(0.5f);
     g_game_state.enemies[ind].set_acceleration(glm::vec3(0.0f, -9.81f, 0.0f));
+    g_game_state.enemies[ind].m_jumping_power = 4.0f;
 
     ++ind;
 //
@@ -324,6 +325,7 @@ void initialise()
     g_game_state.enemies[ind].set_movement(glm::vec3(0.0f));
     g_game_state.enemies[ind].set_speed(0.5f);
     g_game_state.enemies[ind].set_acceleration(glm::vec3(0.0f, -9.81f, 0.0f));
+    g_game_state.enemies[ind].m_jumping_power = 4.5f;
 
     ++ind;
 //
@@ -335,6 +337,7 @@ void initialise()
     g_game_state.enemies[ind].set_movement(glm::vec3(0.0f));
     g_game_state.enemies[ind].set_speed(0.5f);
     g_game_state.enemies[ind].set_acceleration(glm::vec3(0.0f, -9.81f, 0.0f));
+    g_game_state.enemies[ind].m_jumping_power = 0.0f;
 
 
     // ————— BLENDING ————— //
@@ -451,7 +454,7 @@ void endMsg(){
 void checkContact(int ind){
     float xCon = fabs(g_game_state.player->m_position.x - g_game_state.enemies[ind].m_position.x);
     float yCon = fabs(g_game_state.player->m_position.y - g_game_state.enemies[ind].m_position.y);
-    if(xCon<0.5f && yCon<0.5f){
+    if(xCon<0.5f && yCon<1.2f ){
         g_game_state.player->m_is_active=false;
     }
 
@@ -482,7 +485,9 @@ void update()
             g_game_state.enemies[i].update(FIXED_TIMESTEP, g_game_state.player, g_game_state.player, 1, g_game_state.map);
             checkContact(i);
             if(fabs(g_game_state.player->m_position.x - g_game_state.enemies[i].m_position.x) < 1.0f){
-
+                if(g_game_state.enemies[i].m_collided_bottom){
+                    g_game_state.enemies[i].m_is_jumping = true;
+                }
                 LOG(fabs(g_game_state.player->m_position.x - g_game_state.enemies[i].m_position.x));
             }
             if(g_game_state.enemies[i].m_is_active){
