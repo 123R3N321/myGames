@@ -14,11 +14,10 @@
 #define LOG(argument) std::cout << argument << '\n'
 #define GL_GLEXT_PROTOTYPES 1
 #define FIXED_TIMESTEP 0.0166666f
-#define ENEMY_COUNT 1
 #define LEVEL1_WIDTH 14
 #define LEVEL1_HEIGHT 5
 
-#define ENEMY_COUNT 1   //add enemies
+#define ENEMY_COUNT 3   //add enemies
 
 #ifdef _WINDOWS
 #include <GL/glew.h>
@@ -28,6 +27,9 @@
  * 2 notes: I am really not sure if the mixer can work at all
  * And that once I remove this main file from cmake, it will fail to detect SDL, so don't panic
  * Just add it back to cmake and problem solved
+
+oh, and, platform location x 4+, y-0.1+
+
  */
 
 #include <SDL_mixer.h>
@@ -42,6 +44,12 @@
 #include <vector>
 #include "SmartEntity.h"
 #include "Map.h"
+
+GLuint  g_text_texture_id;
+const int FONTBANK_SIZE        = 16;
+volatile int enemyCount = ENEMY_COUNT;
+volatile bool GameOver = false;
+
 
 // ————— GAME STATE ————— //
 struct GameState
@@ -69,17 +77,21 @@ const int   VIEWPORT_X = 0,
         VIEWPORT_WIDTH = WINDOW_WIDTH,
         VIEWPORT_HEIGHT = WINDOW_HEIGHT;
 
-const char GAME_WINDOW_NAME[] = "Hello, Maps!";
+const char GAME_WINDOW_NAME[] = "Hello, RandomAssets";
 
 const char V_SHADER_PATH[] = "/home/ren/projects/myGames/include/shaders/vertex_textured.glsl",
-        F_SHADER_PATH[] = "/home/ren/projects/myGames/include/shaders/fragment_textured.glsl";
+        F_SHADER_PATH[] = "/home/ren/projects/myGames/include/shaders/fragment_textured.glsl",
+        FONT_SPRITE_FILEPATH[]   = "/home/ren/projects/myGames/include/assets/font1.png";
 
 const float MILLISECONDS_IN_SECOND = 1000.0;
 
-const char  SPRITESHEET_FILEPATH[]  = "/home/ren/projects/myGames/include/assets/george_0.png",
-        MAP_TILESET_FILEPATH[]  = "/home/ren/projects/myGames/include/assets/tileset.png",
-        BGM_FILEPATH[]          = "/home/ren/projects/myGames/include/assets/dooblydoo.mp3",
-        JUMP_SFX_FILEPATH[]     = "/home/ren/projects/myGames/include/assets/bounce.wav";
+const char
+//SPRITESHEET_FILEPATH[]  = "/home/ren/projects/myGames/include/assets/george_0.png",
+        SPRITESHEET_FILEPATH[]  = "/home/ren/projects/myGames/include/assets/Pikachu4x4.png",
+        ENEMY0_SPRITE_PATH[] = "/home/ren/projects/myGames/include/assets/rocket0.png",
+        MAP_TILESET_FILEPATH[]  = "/home/ren/projects/myGames/include/assets/simpleTile.png",
+        BGM_FILEPATH[]          = "/home/ren/projects/myGames/include/assets/LittlerootTownBGM.mp3",
+        JUMP_SFX_FILEPATH[]     = "/home/ren/projects/myGames/include/assets/pika.wav";
 //
 //const char  SPRITESHEET_FILEPATH[]  = "/home/ren/projects/myGames/include/assets/george_0.png",
 //        PLATFORM_FILEPATH[]     = "/home/ren/projects/myGames/include/assets/platformPack_tile027.png",
@@ -109,6 +121,72 @@ glm::mat4 g_view_matrix, g_projection_matrix;
 
 float   g_previous_ticks = 0.0f,
         g_accumulator = 0.0f;
+
+
+/////////////////////////add text engine//////////////////////////////////
+void draw_text(ShaderProgram *program, GLuint font_texture_id, std::string text, float screen_size, float spacing, glm::vec3 position)
+{
+    // Scale the size of the fontbank in the UV-plane
+    // We will use this for spacing and positioning
+    float width = 1.0f / FONTBANK_SIZE;
+    float height = 1.0f / FONTBANK_SIZE;
+
+    // Instead of having a single pair of arrays, we'll have a series of pairs—one for each character
+    // Don't forget to include <vector>!
+    std::vector<float> vertices;
+    std::vector<float> texture_coordinates;
+
+    // For every character...
+    for (int i = 0; i < text.size(); i++) {
+        // 1. Get their index in the spritesheet, as well as their offset (i.e. their position
+        //    relative to the whole sentence)
+        int spritesheet_index = (int) text[i];  // ascii value of character
+        float offset = (screen_size + spacing) * i;
+
+        // 2. Using the spritesheet index, we can calculate our U- and V-coordinates
+        float u_coordinate = (float) (spritesheet_index % FONTBANK_SIZE) / FONTBANK_SIZE;
+        float v_coordinate = (float) (spritesheet_index / FONTBANK_SIZE) / FONTBANK_SIZE;
+
+        // 3. Inset the current pair in both vectors
+        vertices.insert(vertices.end(), {
+                offset + (-0.5f * screen_size), 0.5f * screen_size,
+                offset + (-0.5f * screen_size), -0.5f * screen_size,
+                offset + (0.5f * screen_size), 0.5f * screen_size,
+                offset + (0.5f * screen_size), -0.5f * screen_size,
+                offset + (0.5f * screen_size), 0.5f * screen_size,
+                offset + (-0.5f * screen_size), -0.5f * screen_size,
+        });
+
+        texture_coordinates.insert(texture_coordinates.end(), {
+                u_coordinate, v_coordinate,
+                u_coordinate, v_coordinate + height,
+                u_coordinate + width, v_coordinate,
+                u_coordinate + width, v_coordinate + height,
+                u_coordinate + width, v_coordinate,
+                u_coordinate, v_coordinate + height,
+        });
+    }
+
+    // 4. And render all of them using the pairs
+    glm::mat4 model_matrix = glm::mat4(1.0f);
+    model_matrix = glm::translate(model_matrix, position);
+
+    program->set_model_matrix(model_matrix);
+    glUseProgram(program->get_program_id());
+
+    glVertexAttribPointer(program->get_position_attribute(), 2, GL_FLOAT, false, 0, vertices.data());
+    glEnableVertexAttribArray(program->get_position_attribute());
+    glVertexAttribPointer(program->get_tex_coordinate_attribute(), 2, GL_FLOAT, false, 0, texture_coordinates.data());
+    glEnableVertexAttribArray(program->get_tex_coordinate_attribute());
+
+    glBindTexture(GL_TEXTURE_2D, font_texture_id);
+    glDrawArrays(GL_TRIANGLES, 0, (int) (text.size() * 6));
+
+    glDisableVertexAttribArray(program->get_position_attribute());
+    glDisableVertexAttribArray(program->get_tex_coordinate_attribute());
+}
+
+
 
 // ————— GENERAL FUNCTIONS ————— //
 GLuint load_texture(const char* filepath)
@@ -168,6 +246,11 @@ void initialise()
 
     glClearColor(BG_RED, BG_BLUE, BG_GREEN, BG_OPACITY);
 
+    ////////////////text font setup//////////////////////////////////////////////
+    g_text_texture_id = load_texture(FONT_SPRITE_FILEPATH);
+
+
+
     // ————— MAP SET-UP ————— //
     GLuint map_texture_id = load_texture(MAP_TILESET_FILEPATH);
     g_game_state.map = new Map(LEVEL1_WIDTH, LEVEL1_HEIGHT, LEVEL_1_DATA, map_texture_id, 1.0f, 4, 1);
@@ -183,10 +266,10 @@ void initialise()
     g_game_state.player->m_texture_id = load_texture(SPRITESHEET_FILEPATH);
 
     // Walking
-    g_game_state.player->m_walking[g_game_state.player->LEFT] = new int[4] { 1, 5, 9, 13 };
-    g_game_state.player->m_walking[g_game_state.player->RIGHT] = new int[4] { 3, 7, 11, 15 };
-    g_game_state.player->m_walking[g_game_state.player->UP] = new int[4] { 2, 6, 10, 14 };
-    g_game_state.player->m_walking[g_game_state.player->DOWN] = new int[4] { 0, 4, 8, 12 };
+    g_game_state.player->m_walking[g_game_state.player->DOWN] = new int[4] { 0, 1, 2, 3 };
+    g_game_state.player->m_walking[g_game_state.player->LEFT] = new int[4] { 4, 5, 6, 7 };
+    g_game_state.player->m_walking[g_game_state.player->RIGHT] = new int[4] { 8, 9, 10, 11 };
+    g_game_state.player->m_walking[g_game_state.player->UP] = new int[4] { 12, 13, 14, 15 };
 
     g_game_state.player->m_animation_indices = g_game_state.player->m_walking[g_game_state.player->RIGHT];  // start George looking left
     g_game_state.player->m_animation_frames = 4;
@@ -219,16 +302,39 @@ void initialise()
     ///////////////////////////below my new stuff//////////////////////////////////////////////////////////////////
     // ————— ENEMY SET-UP ————— //
     // Existing
+    volatile int ind = 0;
     g_game_state.enemies = new Entity[ENEMY_COUNT];
-    g_game_state.enemies[0].set_entity_type(ENEMY);
-    g_game_state.enemies[0].set_ai_type(GUARD);
-    g_game_state.enemies[0].set_ai_state(IDLE);
-    g_game_state.enemies[0].m_texture_id = load_texture(SPRITESHEET_FILEPATH);
-    g_game_state.enemies[0].set_position(glm::vec3(2.5f, 0.0f, 0.0f));
-    g_game_state.enemies[0].set_movement(glm::vec3(0.0f));
-    g_game_state.enemies[0].set_speed(0.5f);
-    g_game_state.enemies[0].set_acceleration(glm::vec3(0.0f, -9.81f, 0.0f));
 
+    g_game_state.enemies[ind].set_entity_type(ENEMY);
+    g_game_state.enemies[ind].set_ai_type(GUARD);
+    g_game_state.enemies[ind].set_ai_state(IDLE);
+    g_game_state.enemies[ind].m_texture_id = load_texture(ENEMY0_SPRITE_PATH);
+    g_game_state.enemies[ind].set_position(glm::vec3(2.5f, 0.0f, 0.0f));
+    g_game_state.enemies[ind].set_movement(glm::vec3(0.0f));
+    g_game_state.enemies[ind].set_speed(0.5f);
+    g_game_state.enemies[ind].set_acceleration(glm::vec3(0.0f, -9.81f, 0.0f));
+
+    ++ind;
+//
+    g_game_state.enemies[ind].set_entity_type(ENEMY);
+    g_game_state.enemies[ind].set_ai_type(COWARD);
+    g_game_state.enemies[ind].set_ai_state(IDLE);
+    g_game_state.enemies[ind].m_texture_id = load_texture(ENEMY0_SPRITE_PATH);
+    g_game_state.enemies[ind].set_position(glm::vec3(4.30f, 2.0f, 0.0f));
+    g_game_state.enemies[ind].set_movement(glm::vec3(0.0f));
+    g_game_state.enemies[ind].set_speed(0.5f);
+    g_game_state.enemies[ind].set_acceleration(glm::vec3(0.0f, -9.81f, 0.0f));
+
+    ++ind;
+//
+    g_game_state.enemies[ind].set_entity_type(ENEMY);
+    g_game_state.enemies[ind].set_ai_type(CHARGER);
+    g_game_state.enemies[ind].set_ai_state(IDLE);
+    g_game_state.enemies[ind].m_texture_id = load_texture(ENEMY0_SPRITE_PATH);
+    g_game_state.enemies[ind].set_position(glm::vec3(12.30f, 2.0f, 0.0f));
+    g_game_state.enemies[ind].set_movement(glm::vec3(0.0f));
+    g_game_state.enemies[ind].set_speed(0.5f);
+    g_game_state.enemies[ind].set_acceleration(glm::vec3(0.0f, -9.81f, 0.0f));
 
 
     // ————— BLENDING ————— //
@@ -303,8 +409,59 @@ void process_input()
     }
 }
 
+std::string instruction(){
+    if(g_game_state.player->m_is_active){
+    if(ENEMY_COUNT == enemyCount){
+        return("Welcome to the game! Goal: lure enemies into abyss!");
+    }else if(enemyCount< ENEMY_COUNT && enemyCount > 0){
+        return("Good job! Keep it up!");
+    }else if(0 == enemyCount){
+        return("Yesss! You killed 'em all!!! YESSS!");
+    }else{
+        return("Ooops something went wrong hahahah sorry orzzz!");
+    }
+    }
+    return "";
+}
+
+//std::string guide(){
+//    if(g_game_state.player->m_position.x>3){
+//
+//    }else(){
+//
+//    }
+//}
+
+
+
+void endMsg(){
+    if(g_game_state.player->m_is_active){
+        if(0 == enemyCount){
+            draw_text(&g_shader_program, g_text_texture_id, std::string("Winner!"), 0.35f, 0.0f,
+                      glm::vec3(g_game_state.player->m_position.x, g_game_state.player->m_position.y+1.00f, 0.0f));
+        }
+
+    }else{  //player dead!
+        draw_text(&g_shader_program, g_text_texture_id, std::string("Game Over"), 0.35f, 0.0f,
+                  glm::vec3(g_game_state.player->m_position.x-1.00f, -1.0f, 0.0f));
+    }
+}
+
+
+void checkContact(int ind){
+    float xCon = fabs(g_game_state.player->m_position.x - g_game_state.enemies[ind].m_position.x);
+    float yCon = fabs(g_game_state.player->m_position.y - g_game_state.enemies[ind].m_position.y);
+    if(xCon<0.5f && yCon<0.5f){
+        g_game_state.player->m_is_active=false;
+    }
+
+}
+
 void update()
 {
+
+    if(g_game_state.player->m_is_active == false) GameOver = true;  //game over!
+
     float ticks = (float)SDL_GetTicks() / MILLISECONDS_IN_SECOND;
     float delta_time = ticks - g_previous_ticks;
     g_previous_ticks = ticks;
@@ -320,7 +477,18 @@ void update()
     while (delta_time >= FIXED_TIMESTEP)
     {
         g_game_state.player->update(FIXED_TIMESTEP, g_game_state.player, NULL, 0, g_game_state.map);
-        for (int i = 0; i < ENEMY_COUNT; i++) g_game_state.enemies[i].update(FIXED_TIMESTEP, g_game_state.player, NULL, 0, g_game_state.map);
+        enemyCount = 0; //recount each time
+        for (int i = 0; i < ENEMY_COUNT; i++) {
+            g_game_state.enemies[i].update(FIXED_TIMESTEP, g_game_state.player, g_game_state.player, 1, g_game_state.map);
+            checkContact(i);
+            if(fabs(g_game_state.player->m_position.x - g_game_state.enemies[i].m_position.x) < 1.0f){
+
+                LOG(fabs(g_game_state.player->m_position.x - g_game_state.enemies[i].m_position.x));
+            }
+            if(g_game_state.enemies[i].m_is_active){
+                enemyCount ++;
+            }
+        }
         delta_time -= FIXED_TIMESTEP;
     }
 
@@ -338,9 +506,19 @@ void render()
 
     g_game_state.player->render(&g_shader_program);
 
-    for (int i = 0; i < ENEMY_COUNT; i++)    g_game_state.enemies[i].render(&g_shader_program);
+    for (int i = 0; i < ENEMY_COUNT; i++)    {
+        g_game_state.enemies[i].render(&g_shader_program);
+    }
 
     g_game_state.map->render(&g_shader_program);
+
+
+    /////////////////////////////////////added a ton of text as instructions///////////////////////////////////////////////
+    draw_text(&g_shader_program, g_text_texture_id, std::string("Enemies Remaining: "), 0.25f, 0.0f, glm::vec3(g_game_state.player->m_position.x-3.00f, 3.0f, 0.0f));
+    draw_text(&g_shader_program, g_text_texture_id, std::string(std::to_string(enemyCount)), 0.25f, 0.0f, glm::vec3(g_game_state.player->m_position.x-3.00f, 2.8f, 0.0f));
+    draw_text(&g_shader_program, g_text_texture_id, std::string(instruction()), 0.25f, 0.0f, glm::vec3((g_game_state.player->m_position.x-5.0f)/2, 2.0f, 0.0f));
+//    draw_text(&g_shader_program, g_text_texture_id, std::string(guide()), 0.25f, 0.0f, glm::vec3(-4.00f, 1.5f, 0.0f));
+    endMsg();
 
     SDL_GL_SwapWindow(g_display_window);
 }

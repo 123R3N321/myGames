@@ -1,12 +1,12 @@
 #include "Map.h"
 
 enum EntityType { PLATFORM, PLAYER, ENEMY   };
-enum AIType     { WALKER, GUARD             };
-enum AIState    { WALKING, IDLE, ATTACKING  };
+enum AIType     { WALKER, GUARD, COWARD, CHARGER             };
+enum AIState    { WALKING, IDLE, ATTACKING, FLEEING, RUSHING  };
 
 class Entity
 {
-private:
+public: //public everything!!!!!
     bool m_is_active = true;
 
     // ––––– ANIMATION ––––– //
@@ -36,6 +36,9 @@ private:
 
 
 public:
+
+//    bool dead = false;  //this becomes true when entity falls out of map, position -4 or -5
+
     // ————— STATIC VARIABLES ————— //
     static const int    SECONDS_PER_FRAME = 4;
     static const int    LEFT    = 0,
@@ -70,6 +73,8 @@ public:
     bool m_collided_left = false;
     bool m_collided_right = false;
 
+    volatile int consistency = 0;   //check for three frames of collision for death
+
     GLuint    m_texture_id;
 
     // ————— METHODS ————— //
@@ -81,8 +86,8 @@ public:
     void render(ShaderProgram* program);
 
     bool const check_collision(Entity* other) const;
-    void const check_collision_y(Entity* collidable_entities, int collidable_entity_count);
-    void const check_collision_x(Entity* collidable_entities, int collidable_entity_count);
+  EntityType check_collision_y(Entity* collidable_entities, int collidable_entity_count);
+  EntityType check_collision_x(Entity* collidable_entities, int collidable_entity_count);
 
     // Overloading our methods to check for only the map
     void const check_collision_y(Map* map);
@@ -96,6 +101,8 @@ public:
     void ai_activate(Entity* player);
     void ai_walk();
     void ai_guard(Entity* player);
+    void ai_runaway(Entity* player);
+    void ai_rush_toward(Entity* player);
 
     void activate() { m_is_active = true; };
     void deactivate() { m_is_active = false; };
@@ -114,7 +121,14 @@ public:
     int        const get_height()         const { return m_height;          };
 
     // ————— SETTERS ————— //
-    void const set_entity_type(EntityType new_entity_type)  { m_entity_type = new_entity_type;      };
+    void const set_entity_type(EntityType new_entity_type)  {
+        m_entity_type = new_entity_type;
+        if (m_entity_type == ENEMY){
+            m_width = 0;
+        }else if(m_entity_type == PLAYER){
+            m_width =0;
+        }
+    };
     void const set_ai_type(AIType new_ai_type)              { m_ai_type = new_ai_type;              };
     void const set_ai_state(AIState new_state)              { m_ai_state = new_state;               };
     void const set_position(glm::vec3 new_position)         { m_position = new_position;            };

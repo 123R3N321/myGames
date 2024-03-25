@@ -87,8 +87,18 @@ void Entity::ai_activate(Entity* player)
             ai_guard(player);
             break;
 
+        case COWARD:
+            ai_runaway(player);
+            break;
+
         default:
             break;
+
+        case CHARGER:
+            ai_rush_toward(player);
+            break;
+
+
     }
 }
 
@@ -105,6 +115,8 @@ void Entity::ai_guard(Entity* player)
             break;
 
         case WALKING:
+//                            LOG(m_position.y);  //what I learned here: -4 is dead
+
             if (m_position.x > player->get_position().x) {
                 m_movement = glm::vec3(-1.0f, 0.0f, 0.0f);
 //                LOG("we walkin from left");
@@ -123,10 +135,81 @@ void Entity::ai_guard(Entity* player)
     }
 }
 
+void Entity::ai_runaway(Entity* player)
+{
+    switch (m_ai_state) {
+        case IDLE:
+            if (glm::distance(m_position, player->get_position()) < 1.0f) m_ai_state = FLEEING;
+            break;
+
+        case FLEEING:
+//                            LOG(m_position.y);  //what I learned here: -4 is dead
+
+            if (m_position.x > player->get_position().x) {
+                m_movement = glm::vec3(3.0f, 0.0f, 0.0f);
+//                LOG("we walkin from left");
+            }
+            else {
+                m_movement = glm::vec3(-3.0f, 0.0f, 0.0f);
+//                LOG("we walkin from right");
+            }
+            break;
+
+        case ATTACKING:
+            break;
+
+        default:
+            break;
+    }
+}
+
+void Entity::ai_rush_toward(Entity* player){
+    switch (m_ai_state) {
+        case IDLE:
+            if (glm::distance(m_position, player->get_position()) < 4.0f) m_ai_state = RUSHING;
+            break;
+
+        case FLEEING:
+//                            LOG(m_position.y);  //what I learned here: -4 is dead
+
+            if (m_position.x > player->get_position().x) {
+                m_movement = glm::vec3(3.0f, 0.0f, 0.0f);
+//                LOG("we walkin from left");
+            }
+            else {
+                m_movement = glm::vec3(-3.0f, 0.0f, 0.0f);
+//                LOG("we walkin from right");
+            }
+            break;
+
+        case RUSHING:
+            if (m_position.x > player->get_position().x) {
+                m_acceleration += glm::vec3(-3.0f, 0.0f, 0.0f);
+//                LOG("we walkin from left");
+            }
+            else {
+                m_acceleration += glm::vec3(3.0f, 0.0f, 0.0f);
+//                LOG("we walkin from right");
+            }
+            break;
+
+        case ATTACKING:
+            break;
+
+        default:
+            break;
+    }
+}
+
 
 void Entity::update(float delta_time, Entity* player, Entity* objects, int object_count, Map* map)
 {
+
+
     if (!m_is_active) return;
+    if (m_position.y < -4.0f){
+        m_is_active = false;    //defacto killed, fell out of map
+    }
 
     m_collided_top = false;
     m_collided_bottom = false;
@@ -162,11 +245,21 @@ void Entity::update(float delta_time, Entity* player, Entity* objects, int objec
     // the map.
     m_position.y += m_velocity.y * delta_time;
     check_collision_y(objects, object_count);
+//    if(ENEMY == check_collision_x(objects, object_count)){//at this point, collision with something not map(enemy/player)
+//        m_is_active = true;
+//    }
     check_collision_y(map);
 
     m_position.x += m_velocity.x * delta_time;
     check_collision_x(objects, object_count);
+
+    if(m_collided_left || m_collided_right){
+    }
+
+
     check_collision_x(map);
+
+
 
     if (m_is_jumping)
     {
@@ -179,7 +272,7 @@ void Entity::update(float delta_time, Entity* player, Entity* objects, int objec
     m_model_matrix = glm::translate(m_model_matrix, m_position);
 }
 
-void const Entity::check_collision_y(Entity* collidable_entities, int collidable_entity_count)
+EntityType Entity::check_collision_y(Entity* collidable_entities, int collidable_entity_count)
 {
     for (int i = 0; i < collidable_entity_count; i++)
     {
@@ -193,17 +286,21 @@ void const Entity::check_collision_y(Entity* collidable_entities, int collidable
                 m_position.y -= y_overlap;
                 m_velocity.y = 0;
                 m_collided_top = true;
+                return collidable_entity->m_entity_type;
+
             }
             else if (m_velocity.y < 0) {
                 m_position.y += y_overlap;
                 m_velocity.y = 0;
                 m_collided_bottom = true;
+                return collidable_entity->m_entity_type;
+
             }
         }
     }
 }
 
-void const Entity::check_collision_x(Entity* collidable_entities, int collidable_entity_count)
+EntityType Entity::check_collision_x(Entity* collidable_entities, int collidable_entity_count)
 {
     for (int i = 0; i < collidable_entity_count; i++)
     {
@@ -217,18 +314,21 @@ void const Entity::check_collision_x(Entity* collidable_entities, int collidable
                 m_position.x -= x_overlap;
                 m_velocity.x = 0;
                 m_collided_right = true;
+                return collidable_entity->m_entity_type;
             }
             else if (m_velocity.x < 0) {
                 m_position.x += x_overlap;
                 m_velocity.x = 0;
                 m_collided_left = true;
+                return collidable_entity->m_entity_type;
+
             }
         }
     }
 }
 
 
-void const Entity::check_collision_y(Map* map)
+const void Entity::check_collision_y(Map* map)
 {
     // Probes for tiles above
     glm::vec3 top = glm::vec3(m_position.x, m_position.y + (m_height / 2), m_position.z);
