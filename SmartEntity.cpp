@@ -174,11 +174,11 @@ void Entity::ai_rush_toward(Entity* player){
 //                            LOG(m_position.y);  //what I learned here: -4 is dead
 
             if (m_position.x > player->get_position().x) {
-                m_movement = glm::vec3(3.0f, 0.0f, 0.0f);
+                m_movement = glm::vec3(1.0f, 0.0f, 0.0f);
 //                LOG("we walkin from left");
             }
             else {
-                m_movement = glm::vec3(-3.0f, 0.0f, 0.0f);
+                m_movement = glm::vec3(-1.0f, 0.0f, 0.0f);
 //                LOG("we walkin from right");
             }
             break;

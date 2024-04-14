@@ -9,10 +9,6 @@
 * Academic Misconduct.
 **/
 
-/**
- * more note: x pos 13 means good.
- */
-
 #define GL_SILENCE_DEPRECATION
 #define STB_IMAGE_IMPLEMENTATION
 #define LOG(argument) std::cout << argument << '\n'
@@ -21,7 +17,7 @@
 #define LEVEL1_WIDTH 14
 #define LEVEL1_HEIGHT 5
 
-#define ENEMY_COUNT 3    //add enemies
+#define ENEMY_COUNT 3   //add enemies
 
 #ifdef _WINDOWS
 #include <GL/glew.h>
@@ -48,28 +44,12 @@ oh, and, platform location x 4+, y-0.1+
 #include <vector>
 #include "SmartEntity.h"
 #include "Map.h"
-#include "Menu.h"
 
 GLuint  g_text_texture_id;
 const int FONTBANK_SIZE        = 16;
 volatile int enemyCount = ENEMY_COUNT;
 volatile bool GameOver = false;
 
-/**
- * Agenda:
- *  implement meta_init() to modify map and enemy
- *  --->next, implement life-count mechanism
- *  --->next, optionally handle shader
- *  --->next, optionally handle music
- */
-
-
-//Set metaData which is global variable
-int meta_player_life = 3;
-
-int meta_lvl_count = 0;
-std::vector<AIType> EnemyInfo = {COWARD, CHARGER,COWARD};
-std::vector<float> SpawnPo = {2.5f,4.3f,12.3f};
 
 // ————— GAME STATE ————— //
 struct GameState
@@ -107,7 +87,7 @@ const float MILLISECONDS_IN_SECOND = 1000.0;
 
 const char
 //SPRITESHEET_FILEPATH[]  = "/home/ren/projects/myGames/include/assets/george_0.png",
-        SPRITESHEET_FILEPATH[]  = "/home/ren/projects/myGames/include/assets/Pikachu4x4.png",
+SPRITESHEET_FILEPATH[]  = "/home/ren/projects/myGames/include/assets/dice.png",
         ENEMY0_SPRITE_PATH[] = "/home/ren/projects/myGames/include/assets/RachelsRocket.png",
         MAP_TILESET_FILEPATH[]  = "/home/ren/projects/myGames/include/assets/simpleTile.png",
         BGM_FILEPATH[]          = "/home/ren/projects/myGames/include/assets/LittlerootTownBGM.mp3",
@@ -121,36 +101,14 @@ const int NUMBER_OF_TEXTURES = 1;
 const GLint LEVEL_OF_DETAIL = 0;
 const GLint TEXTURE_BORDER = 0;
 
-
-
-
 unsigned int LEVEL_1_DATA[] =
         {
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,
                 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1,
-                2, 1, 1, 1, 1, 0, 1, 1, 1, 2, 2, 2, 2, 2,
+                2, 2, 1, 1, 0, 0, 1, 1, 1, 2, 2, 2, 2, 2,
                 2, 2, 2, 2, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2
         };
-
-unsigned int LEVEL_2_DATA[] =
-        {
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,
-                1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1,
-                2, 0, 1, 1, 0, 0, 0, 1, 1, 2, 2, 2, 2, 2,
-                2, 0, 2, 2, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2
-        };
-
-unsigned int LEVEL_3_DATA[] =
-        {
-                1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
-                0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1,
-                1, 1, 1, 1, 1, 0, 1, 1, 0, 2, 2, 2, 2, 2,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2
-        };
-
 
 // ————— VARIABLES ————— //
 GameState g_game_state;
@@ -257,84 +215,6 @@ GLuint load_texture(const char* filepath)
     return texture_id;
 }
 
-/**
- * Level stores information of each level and is only directly accessed
- * by meta_init()
- *
- * Note that as for now we have very limited capabilities in it
- * we control enemy type, thats it.
- *
- * Leave map redulation to meta_init as we have array which is harder to deal with
- */
-
-struct Level{   //, create with arugemts (AIType, AIType, AIType, posx1, posx2, posx3)
-    std::vector<AIType> EnemyTypes;
-    std::vector<float> SpawnPos;  //3 ints, we only care about x position
-    Level(std::vector<AIType> EnemyInfo = {COWARD, COWARD,COWARD}, std::vector<float> SpawnPo = {2.5f,4.3f,12.3f}) : EnemyTypes(EnemyInfo), SpawnPos(SpawnPo){}
-};
-volatile int ind = 0;
-
-void meta_init(){
-    g_game_state.player->set_position(glm::vec3(0.0f, 5.0f, 0.0f));//always airdrop player lol
-//    meta_lvl_count%=3;
-
-    GLuint map_texture_id = load_texture(MAP_TILESET_FILEPATH);
-
-    g_game_state.map = new Map(LEVEL1_WIDTH, LEVEL1_HEIGHT, (0==meta_lvl_count)?LEVEL_1_DATA:(1==meta_lvl_count)?LEVEL_2_DATA:LEVEL_3_DATA, map_texture_id, 1.0f, 4, 1);
-    LOG("cur level: "<<meta_lvl_count<<std::endl);
-
-    Level level1(EnemyInfo,SpawnPo);
-    if(1==meta_lvl_count){
-        level1.EnemyTypes[1] = CHARGER;
-        level1.SpawnPos[0]+= 4.0f;
-    }
-    if(2==meta_lvl_count){
-        level1.EnemyTypes[2] = CHARGER;
-        level1.SpawnPos[2]+= 2.0f;
-    }
-
-    // ————— ENEMY SET-UP ————— //
-    // Existing
-    g_game_state.enemies = new Entity[ENEMY_COUNT];
-    for (ind=0;ind<ENEMY_COUNT;++ind){
-        g_game_state.enemies[ind].set_entity_type(ENEMY);
-        g_game_state.enemies[ind].set_ai_type(level1.EnemyTypes[ind]);
-        g_game_state.enemies[ind].set_ai_state(IDLE);
-        g_game_state.enemies[ind].m_texture_id = load_texture(ENEMY0_SPRITE_PATH);
-        g_game_state.enemies[ind].set_position(glm::vec3(level1.SpawnPos[ind], 5.0f, 0.0f));
-        g_game_state.enemies[ind].set_movement(glm::vec3(0.0f));
-        g_game_state.enemies[ind].set_speed(0.5f);
-        g_game_state.enemies[ind].set_acceleration(glm::vec3(0.0f, -9.81f, 0.0f));
-        g_game_state.enemies[ind].m_jumping_power = 0.0f;
-    }
-
-//
-//
-//    ++ind;
-////
-//    g_game_state.enemies[ind].set_entity_type(ENEMY);
-//    g_game_state.enemies[ind].set_ai_type(COWARD);
-//    g_game_state.enemies[ind].set_ai_state(IDLE);
-//    g_game_state.enemies[ind].m_texture_id = load_texture(ENEMY0_SPRITE_PATH);
-//    g_game_state.enemies[ind].set_position(glm::vec3(4.30f, 2.0f, 0.0f));
-//    g_game_state.enemies[ind].set_movement(glm::vec3(0.0f));
-//    g_game_state.enemies[ind].set_speed(0.5f);
-//    g_game_state.enemies[ind].set_acceleration(glm::vec3(0.0f, -9.81f, 0.0f));
-//    g_game_state.enemies[ind].m_jumping_power = 4.5f;
-//
-//    ++ind;
-////
-//    g_game_state.enemies[ind].set_entity_type(ENEMY);
-//    g_game_state.enemies[ind].set_ai_type(CHARGER);
-//    g_game_state.enemies[ind].set_ai_state(IDLE);
-//    g_game_state.enemies[ind].m_texture_id = load_texture(ENEMY0_SPRITE_PATH);
-//    g_game_state.enemies[ind].set_position(glm::vec3(12.30f, 2.0f, 0.0f));
-//    g_game_state.enemies[ind].set_movement(glm::vec3(0.0f));
-//    g_game_state.enemies[ind].set_speed(0.5f);
-//    g_game_state.enemies[ind].set_acceleration(glm::vec3(0.0f, -9.81f, 0.0f));
-//    g_game_state.enemies[ind].m_jumping_power = 0.0f;
-}
-
 void initialise()
 {
     // ————— GENERAL ————— //
@@ -372,28 +252,14 @@ void initialise()
 
 
     // ————— MAP SET-UP ————— //
-
-
-
-//    if(0==meta_lvl_count){
-//        g_game_state.map = new Map(LEVEL1_WIDTH, LEVEL1_HEIGHT, LEVEL_1_DATA, map_texture_id, 1.0f, 4, 1);
-//
-//    }
-//
-//    if(1==meta_lvl_count){
-//        g_game_state.map = new Map(LEVEL1_WIDTH, LEVEL1_HEIGHT, LEVEL_2_DATA, map_texture_id, 1.0f, 4, 1);
-//
-//    }
-//    if(2==meta_lvl_count){
-//        g_game_state.map = new Map(LEVEL1_WIDTH, LEVEL1_HEIGHT, LEVEL_3_DATA, map_texture_id, 1.0f, 4, 1);
-//
-//    }
+    GLuint map_texture_id = load_texture(MAP_TILESET_FILEPATH);
+    g_game_state.map = new Map(LEVEL1_WIDTH, LEVEL1_HEIGHT, LEVEL_1_DATA, map_texture_id, 1.0f, 4, 1);
 
     // ————— GEORGE SET-UP ————— //
     // Existing
     g_game_state.player = new Entity();
     g_game_state.player->set_entity_type(PLAYER);
-    g_game_state.player->set_position(glm::vec3(0.0f, 5.0f, 0.0f));
+    g_game_state.player->set_position(glm::vec3(0.0f, 0.0f, 0.0f));
     g_game_state.player->set_movement(glm::vec3(0.0f));
     g_game_state.player->set_speed(2.5f);
     g_game_state.player->set_acceleration(glm::vec3(0.0f, -9.81f, 0.0f));
@@ -434,7 +300,44 @@ void initialise()
 
 
     ///////////////////////////below my new stuff//////////////////////////////////////////////////////////////////
-        meta_init(); //initialize differently based on level
+    // ————— ENEMY SET-UP ————— //
+    // Existing
+    volatile int ind = 0;
+    g_game_state.enemies = new Entity[ENEMY_COUNT];
+
+    g_game_state.enemies[ind].set_entity_type(ENEMY);
+    g_game_state.enemies[ind].set_ai_type(GUARD);
+    g_game_state.enemies[ind].set_ai_state(IDLE);
+    g_game_state.enemies[ind].m_texture_id = load_texture(ENEMY0_SPRITE_PATH);
+    g_game_state.enemies[ind].set_position(glm::vec3(2.5f, 0.0f, 0.0f));
+    g_game_state.enemies[ind].set_movement(glm::vec3(0.0f));
+    g_game_state.enemies[ind].set_speed(0.5f);
+    g_game_state.enemies[ind].set_acceleration(glm::vec3(0.0f, -9.81f, 0.0f));
+    g_game_state.enemies[ind].m_jumping_power = 4.0f;
+
+    ++ind;
+//
+    g_game_state.enemies[ind].set_entity_type(ENEMY);
+    g_game_state.enemies[ind].set_ai_type(COWARD);
+    g_game_state.enemies[ind].set_ai_state(IDLE);
+    g_game_state.enemies[ind].m_texture_id = load_texture(ENEMY0_SPRITE_PATH);
+    g_game_state.enemies[ind].set_position(glm::vec3(4.30f, 2.0f, 0.0f));
+    g_game_state.enemies[ind].set_movement(glm::vec3(0.0f));
+    g_game_state.enemies[ind].set_speed(0.5f);
+    g_game_state.enemies[ind].set_acceleration(glm::vec3(0.0f, -9.81f, 0.0f));
+    g_game_state.enemies[ind].m_jumping_power = 4.5f;
+
+    ++ind;
+//
+    g_game_state.enemies[ind].set_entity_type(ENEMY);
+    g_game_state.enemies[ind].set_ai_type(CHARGER);
+    g_game_state.enemies[ind].set_ai_state(IDLE);
+    g_game_state.enemies[ind].m_texture_id = load_texture(ENEMY0_SPRITE_PATH);
+    g_game_state.enemies[ind].set_position(glm::vec3(12.30f, 2.0f, 0.0f));
+    g_game_state.enemies[ind].set_movement(glm::vec3(0.0f));
+    g_game_state.enemies[ind].set_speed(0.5f);
+    g_game_state.enemies[ind].set_acceleration(glm::vec3(0.0f, -9.81f, 0.0f));
+    g_game_state.enemies[ind].m_jumping_power = 0.0f;
 
 
     // ————— BLENDING ————— //
@@ -442,17 +345,6 @@ void initialise()
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
-void handleMem(){   //extremely dangerous func. Only called when switch scene
-    delete[] g_game_state.enemies;
-//    delete    g_game_state.player;
-    delete    g_game_state.map;
-//    Mix_FreeChunk(g_game_state.jump_sfx);
-//    Mix_FreeMusic(g_game_state.bgm);
-}
-
-float lockLife = 0.0f;
-
-bool keyLock = false;
 void process_input()
 {
     g_game_state.player->set_movement(glm::vec3(0.0f));
@@ -491,30 +383,12 @@ void process_input()
                         }
                         break;
 
-                    case SDLK_RETURN:   //I am playing with level switch here
-                        // Jump
-                        LOG("ret pressed"<<" "<<"lockLife: "<<lockLife<<std::endl);
-                        if(!keyLock){
-                            LOG("actually fired"<<'\n');
-                            meta_lvl_count++;
-                            handleMem();    //delete everything from previous level
-                            meta_init();
-                            keyLock = true;
-                        }
-                         //initialize differently based on level by calling meta_init
-                        break;
-
                     default:
                         break;
                 }
 
             default:
                 break;
-
-
-
-
-
         }
     }
 
@@ -540,15 +414,15 @@ void process_input()
 
 std::string instruction(){
     if(g_game_state.player->m_is_active){
-    if(ENEMY_COUNT == enemyCount){
-        return("Welcome to the game! run to the right!");
-    }else if(enemyCount< ENEMY_COUNT && enemyCount > 0){
-        return("Good job! Keep it up!");
-    }else if(0 == enemyCount){
-        return("Yesss! You killed 'em all!!! YESSS!");
-    }else{
-        return("Ooops something went wrong hahahah sorry orzzz!");
-    }
+        if(ENEMY_COUNT == enemyCount){
+            return("Welcome to the game! Goal: lure enemies into abyss!");
+        }else if(enemyCount< ENEMY_COUNT && enemyCount > 0){
+            return("Good job! Keep it up!");
+        }else if(0 == enemyCount){
+            return("Yesss! You killed 'em all!!! YESSS!");
+        }else{
+            return("Ooops something went wrong hahahah sorry orzzz!");
+        }
     }
     return "";
 }
@@ -565,7 +439,7 @@ std::string instruction(){
 
 void endMsg(){
     if(g_game_state.player->m_is_active){
-        if(0 == enemyCount || meta_lvl_count>4){
+        if(0 == enemyCount){
             draw_text(&g_shader_program, g_text_texture_id, std::string("Winner!"), 0.35f, 0.0f,
                       glm::vec3(g_game_state.player->m_position.x, g_game_state.player->m_position.y+1.00f, 0.0f));
         }
@@ -581,36 +455,13 @@ void checkContact(int ind){
     float xCon = fabs(g_game_state.player->m_position.x - g_game_state.enemies[ind].m_position.x);
     float yCon = fabs(g_game_state.player->m_position.y - g_game_state.enemies[ind].m_position.y);
     if(xCon<0.5f && yCon<1.2f ){
-        meta_player_life --;
-        g_game_state.player->set_position(glm::vec3(0.0f, 5.0f, 0.0f));//always airdrop player lol
-
-        if(meta_player_life<=0){
-            g_game_state.player->m_is_active=false;
-        }
+        g_game_state.player->m_is_active=false;
     }
 
 }
 
 void update()
 {
-
-
-    if(g_game_state.player->m_position.x>13){
-        meta_lvl_count++;
-        LOG("reached destination point"<<" "<<"lockLife: "<<lockLife<<std::endl);
-        if(!keyLock){
-            LOG("actually fired"<<'\n');
-            meta_lvl_count++;
-                handleMem();    //delete everything from previous level
-                meta_init();
-                keyLock = true;
-
-
-        }
-    }
-
-
-//    LOG("player is at x pos: "<<g_game_state.player->m_position.x<<'\n');
 
     if(g_game_state.player->m_is_active == false) GameOver = true;  //game over!
 
@@ -647,12 +498,6 @@ void update()
     }
 
     g_accumulator = delta_time;
-    if(keyLock){
-        if(delta_time-lockLife>0.01f){
-            keyLock = false;
-        }
-        lockLife = delta_time;
-    }
 
     g_view_matrix = glm::mat4(1.0f);
     g_view_matrix = glm::translate(g_view_matrix, glm::vec3(-g_game_state.player->get_position().x, 0.0f, 0.0f));//moving camera to follow player
@@ -674,17 +519,11 @@ void render()
 
 
     /////////////////////////////////////added a ton of text as instructions///////////////////////////////////////////////
-    draw_text(&g_shader_program, g_text_texture_id, std::string("Life Remaining: "), 0.25f, 0.0f, glm::vec3(g_game_state.player->m_position.x-3.00f, 3.0f, 0.0f));
-    draw_text(&g_shader_program, g_text_texture_id, std::string(std::to_string(meta_player_life)), 0.25f, 0.0f, glm::vec3(g_game_state.player->m_position.x-3.00f, 2.8f, 0.0f));
+    draw_text(&g_shader_program, g_text_texture_id, std::string("Enemies Remaining: "), 0.25f, 0.0f, glm::vec3(g_game_state.player->m_position.x-3.00f, 3.0f, 0.0f));
+    draw_text(&g_shader_program, g_text_texture_id, std::string(std::to_string(enemyCount)), 0.25f, 0.0f, glm::vec3(g_game_state.player->m_position.x-3.00f, 2.8f, 0.0f));
     draw_text(&g_shader_program, g_text_texture_id, std::string(instruction()), 0.25f, 0.0f, glm::vec3((g_game_state.player->m_position.x-5.0f)/2, 2.0f, 0.0f));
 //    draw_text(&g_shader_program, g_text_texture_id, std::string(guide()), 0.25f, 0.0f, glm::vec3(-4.00f, 1.5f, 0.0f));
     endMsg();
-    if(meta_lvl_count<1){
-        Menu menu;
-        menu.render(&g_shader_program);
-        draw_text(&g_shader_program, g_text_texture_id, "Hello!", 0.55f, 0.0f, glm::vec3(-1.20f, 1.0f, 0.0f));
-        draw_text(&g_shader_program, g_text_texture_id, "Press Enter to start", 0.25f, 0.0f, glm::vec3(-2.4f, 0.0f, 0.0f));
-    }
 
     SDL_GL_SwapWindow(g_display_window);
 }

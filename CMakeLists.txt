@@ -31,6 +31,9 @@ add_executable(myGames
 #        exercise.cpp
 #        pong.cpp
         simpleGame.cpp
+        Menu.cpp
+        Menu.h
+#        3d.cpp
 )
 
 # Include SDL2 headers for the executable

@@ -79,7 +79,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "27"
+			"value" : "28"
 		},
 		{
 			"name" : "CMAKE_CACHE_PATCH_VERSION",
@@ -91,7 +91,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "8"
+			"value" : "1"
 		},
 		{
 			"name" : "CMAKE_COLOR_DIAGNOSTICS",
@@ -887,7 +887,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "/opt/clion/bin/cmake/linux/x64/share/cmake-3.27"
+			"value" : "/opt/clion/bin/cmake/linux/x64/share/cmake-3.28"
 		},
 		{
 			"name" : "CMAKE_SHARED_LINKER_FLAGS",
@@ -1820,54 +1820,6 @@
 			],
 			"type" : "INTERNAL",
 			"value" : "2.0.4"
-		},
-		{
-			"name" : "SDL2_image_DIR",
-			"properties" : 
-			[
-				{
-					"name" : "HELPSTRING",
-					"value" : "The directory containing a CMake configuration file for SDL2_image."
-				}
-			],
-			"type" : "PATH",
-			"value" : "SDL2_image_DIR-NOTFOUND"
-		},
-		{
-			"name" : "SDL2_mixer_DIR",
-			"properties" : 
-			[
-				{
-					"name" : "HELPSTRING",
-					"value" : "The directory containing a CMake configuration file for SDL2_mixer."
-				}
-			],
-			"type" : "PATH",
-			"value" : "SDL2_mixer_DIR-NOTFOUND"
-		},
-		{
-			"name" : "SDL_MIXER_INCLUDE_DIR",
-			"properties" : 
-			[
-				{
-					"name" : "HELPSTRING",
-					"value" : "Path to a file."
-				}
-			],
-			"type" : "PATH",
-			"value" : "SDL_MIXER_INCLUDE_DIR-NOTFOUND"
-		},
-		{
-			"name" : "SDL_MIXER_LIBRARY",
-			"properties" : 
-			[
-				{
-					"name" : "HELPSTRING",
-					"value" : "Path to a library."
-				}
-			],
-			"type" : "FILEPATH",
-			"value" : "SDL_MIXER_LIBRARY-NOTFOUND"
 		},
 		{
 			"name" : "_CMAKE_LINKER_PUSHPOP_STATE_SUPPORTED",
