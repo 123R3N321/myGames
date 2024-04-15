@@ -30,10 +30,10 @@ add_executable(myGames
         include/ShaderProgram.cpp
 #        exercise.cpp
 #        pong.cpp
-        simpleGame.cpp
+#        simpleGame.cpp
         Menu.cpp
         Menu.h
-#        3d.cpp
+        3d.cpp
 )
 
 # Include SDL2 headers for the executable

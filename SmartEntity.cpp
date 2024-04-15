@@ -90,6 +90,8 @@ void Entity::ai_activate(Entity* player)
         case COWARD:
             ai_runaway(player);
             break;
+        case ROCKET:
+            ai_launchSequence(player);
 
         default:
             break;
@@ -196,6 +198,46 @@ void Entity::ai_rush_toward(Entity* player){
 
         case ATTACKING:
             break;
+
+        default:
+            break;
+    }
+}
+
+void Entity::ai_launchSequence(Entity* player)
+{
+    switch (m_ai_state) {
+        case IDLE:
+            if (glm::distance(m_position, player->get_position()) < 5.0f) m_ai_state = WALKING;
+            if (glm::distance(m_position, player->get_position()) < 2.0f) m_ai_state = LAUNCHING;
+            break;
+
+        case WALKING:
+//                            LOG(m_position.y);  //what I learned here: -4 is dead
+            if (glm::distance(m_position, player->get_position()) < 2.0f) m_ai_state = LAUNCHING;
+
+            if (m_position.x > player->get_position().x) {
+                m_movement = glm::vec3(-1.0f, 0.0f, 0.0f);
+//                LOG("we walkin from left");
+            }
+            else {
+                m_movement = glm::vec3(+1.0f, 0.0f, 0.0f);
+//                LOG("we walkin from right");
+            }
+            break;
+
+        case ATTACKING:
+            break;
+
+        case LAUNCHING:
+            LOG("LAUNCHED");
+            if(m_position.y<5.0f) m_velocity += glm::vec3(0.0f, 0.2f, 0.0f);
+            if(m_position.y>=5.0f) {m_acceleration = glm::vec3(0.0f, -9.81f, 0.0f);
+            m_position = glm::vec3(0.0f, 0.0f, 0.0f);
+                m_ai_state = IDLE;
+            }
+            m_movement.x = 0;
+            if(0 == m_position.x){m_velocity.y=0;}
 
         default:
             break;

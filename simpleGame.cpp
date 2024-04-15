@@ -68,7 +68,7 @@ volatile bool GameOver = false;
 int meta_player_life = 3;
 
 int meta_lvl_count = 0;
-std::vector<AIType> EnemyInfo = {COWARD, CHARGER,COWARD};
+std::vector<AIType> EnemyInfo = {ROCKET, ROCKET,ROCKET};
 std::vector<float> SpawnPo = {2.5f,4.3f,12.3f};
 
 // ————— GAME STATE ————— //
@@ -129,16 +129,16 @@ unsigned int LEVEL_1_DATA[] =
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,
                 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1,
-                2, 1, 1, 1, 1, 0, 1, 1, 1, 2, 2, 2, 2, 2,
+                2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2,
                 2, 2, 2, 2, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2
         };
 
 unsigned int LEVEL_2_DATA[] =
         {
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0,
                 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1,
-                2, 0, 1, 1, 0, 0, 0, 1, 1, 2, 2, 2, 2, 2,
+                2, 0, 1, 1, 1, 1, 0, 1, 1, 2, 2, 2, 2, 2,
                 2, 0, 2, 2, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2
         };
 
@@ -147,8 +147,8 @@ unsigned int LEVEL_3_DATA[] =
                 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
                 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1,
-                1, 1, 1, 1, 1, 0, 1, 1, 0, 2, 2, 2, 2, 2,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2
+                1, 1, 1, 1, 1, 0, 1, 1, 1, 2, 2, 2, 2, 2,
+                0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 2, 2, 2, 2
         };
 
 
@@ -632,12 +632,13 @@ void update()
         enemyCount = 0; //recount each time
         for (int i = 0; i < ENEMY_COUNT; i++) {
             g_game_state.enemies[i].update(FIXED_TIMESTEP, g_game_state.player, g_game_state.player, 1, g_game_state.map);
+//            LOG(g_game_state.enemies[i].m_ai_type);
             checkContact(i);
             if(fabs(g_game_state.player->m_position.x - g_game_state.enemies[i].m_position.x) < 1.0f){
                 if(g_game_state.enemies[i].m_collided_bottom){
                     g_game_state.enemies[i].m_is_jumping = true;
                 }
-                LOG(fabs(g_game_state.player->m_position.x - g_game_state.enemies[i].m_position.x));
+//                LOG(fabs(g_game_state.player->m_position.x - g_game_state.enemies[i].m_position.x));
             }
             if(g_game_state.enemies[i].m_is_active){
                 enemyCount ++;

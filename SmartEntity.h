@@ -1,8 +1,8 @@
 #include "Map.h"
 
 enum EntityType { PLATFORM, PLAYER, ENEMY   };
-enum AIType     { WALKER, GUARD, COWARD, CHARGER             };
-enum AIState    { WALKING, IDLE, ATTACKING, FLEEING, RUSHING  };
+enum AIType     { WALKER, GUARD, COWARD, CHARGER, ROCKET             };
+enum AIState    { WALKING, IDLE, ATTACKING, FLEEING, RUSHING, LAUNCHING  };
 
 class Entity
 {
@@ -102,6 +102,7 @@ public:
     void ai_walk();
     void ai_guard(Entity* player);
     void ai_runaway(Entity* player);
+    void ai_launchSequence(Entity* player);
     void ai_rush_toward(Entity* player);
 
     void activate() { m_is_active = true; };
