@@ -1,4 +1,7 @@
 
+#define LOG(argument) std::cout << argument << '\n'
+
+
 #define GL_SILENCE_DEPRECATION
 #define STB_IMAGE_IMPLEMENTATION
 #define LOG(argument) std::cout << argument << '\n'
@@ -13,14 +16,6 @@
 #include <GL/glew.h>
 #endif
 
-/**
- * 2 notes: I am really not sure if the mixer can work at all
- * And that once I remove this main file from cmake, it will fail to detect SDL, so don't panic
- * Just add it back to cmake and problem solved
-
-oh, and, platform location x 4+, y-0.1+
-
- */
 
 #include <SDL_mixer.h>
 #include <SDL.h>
@@ -30,23 +25,19 @@ oh, and, platform location x 4+, y-0.1+
 #include "include/glm/gtc/type_ptr.hpp"
 #include "include/ShaderProgram.h"
 #include "include/stb_image.h"
-//#include "cmath"
-#include <ctime>
-#include <vector>
-//#include "SmartEntity.h"
-//#include "Map.h"
-//#include "Menu.h"
-
 #include <cmath>
 
 
-const int WINDOW_WIDTH = 800;
+const int WINDOW_WIDTH = 800;   //use a smaller window
 const int WINDOW_HEIGHT = 600;
+
+float rotationSpeed = 10.0f; //global param for speed of diagonal rotation
+
 
 void drawCube() {
     // Front face
     glBegin(GL_QUADS);
-    glColor3f(1.0f, 0.0f, 0.0f); // Red
+    glColor3f(0.80f, 0.0f, 0.0f); // Red
     glVertex3f(-0.5f, -0.5f, 0.5f);
     glVertex3f(0.5f, -0.5f, 0.5f);
     glVertex3f(0.5f, 0.5f, 0.5f);
@@ -55,7 +46,7 @@ void drawCube() {
 
     // Back face
     glBegin(GL_QUADS);
-    glColor3f(0.0f, 1.0f, 0.0f); // Green
+    glColor3f(0.0f, 0.80f, 0.0f); // Green
     glVertex3f(-0.5f, -0.5f, -0.5f);
     glVertex3f(0.5f, -0.5f, -0.5f);
     glVertex3f(0.5f, 0.5f, -0.5f);
@@ -64,7 +55,7 @@ void drawCube() {
 
     // Top face
     glBegin(GL_QUADS);
-    glColor3f(0.0f, 0.0f, 1.0f); // Blue
+    glColor3f(0.0f, 0.0f, 0.80f); // Blue
     glVertex3f(-0.5f, 0.5f, -0.5f);
     glVertex3f(0.5f, 0.5f, -0.5f);
     glVertex3f(0.5f, 0.5f, 0.5f);
@@ -73,7 +64,7 @@ void drawCube() {
 
     // Bottom face
     glBegin(GL_QUADS);
-    glColor3f(1.0f, 1.0f, 0.0f); // Yellow
+    glColor3f(0.80f, 0.80f, 0.0f); // Yellow
     glVertex3f(-0.5f, -0.5f, -0.5f);
     glVertex3f(0.5f, -0.5f, -0.5f);
     glVertex3f(0.5f, -0.5f, 0.5f);
@@ -82,7 +73,7 @@ void drawCube() {
 
     // Right face
     glBegin(GL_QUADS);
-    glColor3f(1.0f, 0.0f, 1.0f); // Magenta
+    glColor3f(0.80f, 0.0f, 0.80f); // Magenta
     glVertex3f(0.5f, -0.5f, -0.5f);
     glVertex3f(0.5f, 0.5f, -0.5f);
     glVertex3f(0.5f, 0.5f, 0.5f);
@@ -91,7 +82,7 @@ void drawCube() {
 
     // Left face
     glBegin(GL_QUADS);
-    glColor3f(0.0f, 1.0f, 1.0f); // Cyan
+    glColor3f(0.0f, 0.80f, 0.80f); // Cyan
     glVertex3f(-0.5f, -0.5f, -0.5f);
     glVertex3f(-0.5f, 0.5f, -0.5f);
     glVertex3f(-0.5f, 0.5f, 0.5f);
@@ -100,9 +91,12 @@ void drawCube() {
 }
 
 int main(int argc, char* argv[]) {
+
+    float totalRotationAngle = 0.0f;    //non-user tracker param
+
     SDL_Init(SDL_INIT_VIDEO);
 
-    SDL_Window* window = SDL_CreateWindow("OpenGL Cube", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+    SDL_Window* window = SDL_CreateWindow("CubeExperiment", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                                           WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
     SDL_GLContext context = SDL_GL_CreateContext(window);
@@ -132,8 +126,10 @@ int main(int argc, char* argv[]) {
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
         glTranslatef(0.0f, 0.0f, -5.0f);
-        glRotatef((GLfloat)SDL_GetTicks() / 100.0f, 1.0f, 1.0f, 1.0f); // Rotate the cube
-
+        float rotationAngle = (GLfloat)SDL_GetTicks() / 100.0f * rotationSpeed; //problem is this line cannot be easily adjusted to other modes of control
+        glRotatef(rotationAngle, 1.0f, 1.0f, 1.0f); // Rotate the cube
+        totalRotationAngle += rotationAngle;
+        if(totalRotationAngle/100 >= 180){rotationSpeed=0;} //stop rotation, only safe beyond 180 deg as 90 deg time window not enough
         // Draw the cube
         drawCube();
 

@@ -68,7 +68,7 @@ volatile bool GameOver = false;
 int meta_player_life = 3;
 
 int meta_lvl_count = 0;
-std::vector<AIType> EnemyInfo = {ROCKET, ROCKET,ROCKET};
+std::vector<AIType> EnemyInfo = {CHARGER, ROCKET,ROCKET};
 std::vector<float> SpawnPo = {2.5f,4.3f,12.3f};
 
 // ————— GAME STATE ————— //
@@ -565,7 +565,7 @@ std::string instruction(){
 
 void endMsg(){
     if(g_game_state.player->m_is_active){
-        if(0 == enemyCount || meta_lvl_count>4){
+        if(0 == enemyCount || meta_lvl_count>5){
             draw_text(&g_shader_program, g_text_texture_id, std::string("Winner!"), 0.35f, 0.0f,
                       glm::vec3(g_game_state.player->m_position.x, g_game_state.player->m_position.y+1.00f, 0.0f));
         }

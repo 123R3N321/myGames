@@ -21,7 +21,7 @@ add_executable(myGames
 #        testField.cpp
 #        Entity.cpp
 #        Entity.h
-        SmartEntity.cpp
+#        SmartEntity.cpp
         SmartEntity.h
         Map.cpp
         Map.h
@@ -30,8 +30,8 @@ add_executable(myGames
         include/ShaderProgram.cpp
 #        exercise.cpp
 #        pong.cpp
-#        simpleGame.cpp
-        Menu.cpp
+#        simpleGamesimpleGame.cpp
+#        Menu.cpp
         Menu.h
         3d.cpp
 )

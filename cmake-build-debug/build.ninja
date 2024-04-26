@@ -49,13 +49,6 @@ cmake_ninja_workdir = /home/ren/projects/myGames/cmake-build-debug/
 
 build cmake_object_order_depends_target_myGames: phony || CMakeFiles/myGames.dir
 
-build CMakeFiles/myGames.dir/SmartEntity.cpp.o: CXX_COMPILER__myGames_unscanned_Debug /home/ren/projects/myGames/SmartEntity.cpp || cmake_object_order_depends_target_myGames
-  DEP_FILE = CMakeFiles/myGames.dir/SmartEntity.cpp.o.d
-  FLAGS = -g -fdiagnostics-color=always -D_REENTRANT
-  INCLUDES = -isystem /usr/include/SDL2
-  OBJECT_DIR = CMakeFiles/myGames.dir
-  OBJECT_FILE_DIR = CMakeFiles/myGames.dir
-
 build CMakeFiles/myGames.dir/Map.cpp.o: CXX_COMPILER__myGames_unscanned_Debug /home/ren/projects/myGames/Map.cpp || cmake_object_order_depends_target_myGames
   DEP_FILE = CMakeFiles/myGames.dir/Map.cpp.o.d
   FLAGS = -g -fdiagnostics-color=always -D_REENTRANT
@@ -69,13 +62,6 @@ build CMakeFiles/myGames.dir/include/ShaderProgram.cpp.o: CXX_COMPILER__myGames_
   INCLUDES = -isystem /usr/include/SDL2
   OBJECT_DIR = CMakeFiles/myGames.dir
   OBJECT_FILE_DIR = CMakeFiles/myGames.dir/include
-
-build CMakeFiles/myGames.dir/Menu.cpp.o: CXX_COMPILER__myGames_unscanned_Debug /home/ren/projects/myGames/Menu.cpp || cmake_object_order_depends_target_myGames
-  DEP_FILE = CMakeFiles/myGames.dir/Menu.cpp.o.d
-  FLAGS = -g -fdiagnostics-color=always -D_REENTRANT
-  INCLUDES = -isystem /usr/include/SDL2
-  OBJECT_DIR = CMakeFiles/myGames.dir
-  OBJECT_FILE_DIR = CMakeFiles/myGames.dir
 
 build CMakeFiles/myGames.dir/3d.cpp.o: CXX_COMPILER__myGames_unscanned_Debug /home/ren/projects/myGames/3d.cpp || cmake_object_order_depends_target_myGames
   DEP_FILE = CMakeFiles/myGames.dir/3d.cpp.o.d
@@ -92,7 +78,7 @@ build CMakeFiles/myGames.dir/3d.cpp.o: CXX_COMPILER__myGames_unscanned_Debug /ho
 #############################################
 # Link the executable myGames
 
-build myGames: CXX_EXECUTABLE_LINKER__myGames_Debug CMakeFiles/myGames.dir/SmartEntity.cpp.o CMakeFiles/myGames.dir/Map.cpp.o CMakeFiles/myGames.dir/include/ShaderProgram.cpp.o CMakeFiles/myGames.dir/Menu.cpp.o CMakeFiles/myGames.dir/3d.cpp.o | /usr/lib/x86_64-linux-gnu/libSDL2_mixer.so /usr/lib/x86_64-linux-gnu/libSDL2.so /usr/lib/x86_64-linux-gnu/libGLX.so /usr/lib/x86_64-linux-gnu/libOpenGL.so
+build myGames: CXX_EXECUTABLE_LINKER__myGames_Debug CMakeFiles/myGames.dir/Map.cpp.o CMakeFiles/myGames.dir/include/ShaderProgram.cpp.o CMakeFiles/myGames.dir/3d.cpp.o | /usr/lib/x86_64-linux-gnu/libSDL2_mixer.so /usr/lib/x86_64-linux-gnu/libSDL2.so /usr/lib/x86_64-linux-gnu/libGLX.so /usr/lib/x86_64-linux-gnu/libOpenGL.so
   FLAGS = -g
   LINK_LIBRARIES = -L/usr/lib/x86_64-linux-gnu  -lSDL2  /usr/lib/x86_64-linux-gnu/libSDL2_mixer.so  /usr/lib/x86_64-linux-gnu/libSDL2.so  /usr/lib/x86_64-linux-gnu/libGLX.so  /usr/lib/x86_64-linux-gnu/libOpenGL.so
   OBJECT_DIR = CMakeFiles/myGames.dir
