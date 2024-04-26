@@ -31,7 +31,9 @@
 const int WINDOW_WIDTH = 800;   //use a smaller window
 const int WINDOW_HEIGHT = 600;
 
-float rotationSpeed = 50.0f; //global param for speed of diagonal rotation
+float rotationSpeed = 50.0f; //45 - 55 ok, global param for speed of diagonal rotation
+int axisMode = 0;   //0, 1, 2   (different random number results)
+float height = 5.0f;    //3 - 7 ok, global param for falling height (so also size of dice)
 
 ////////////////////////////////////////sprite loading//////////????????///////////////
 
@@ -208,6 +210,30 @@ float bounceFunction(float time, float height) {
     }
 }
 
+std::string callRes(int angle){
+    angle /= 10;
+    angle *= 10;    //a simple digit trim
+//    LOG("angle rounded: "<<angle);
+//    LOG("check again? "<<angle%180);
+if(0 == axisMode){
+    if(0 == angle%360){
+        return "pink";
+    }
+    else if (0 == angle%180){   //somehow casting not working
+        return "blue";
+    }else{    //90 deg
+        return "red";
+    }
+}
+    else if(1 == axisMode){
+        return "pink";  //unfinished
+    }
+    else{
+        return "cyan";
+    }
+
+}
+
 
 int main(int argc, char* argv[]) {
 
@@ -235,6 +261,11 @@ int main(int argc, char* argv[]) {
 //    glClearColor(BG_RED, BG_BLUE, BG_GREEN, BG_OPACITY);
 //
 //    g_player_texture_id = load_texture(PLAYER_SPRITE_FILEPATH);
+    float Axis[] = {                        //overall 3by3 is enough
+            1.0f,1.0f,1.0f,     //blue
+            1.0f,-1.0f,1.0f,    //pink
+            1.0f,1.0f,-1.0f,    //cyan
+    };
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -245,10 +276,12 @@ int main(int argc, char* argv[]) {
     // Enable depth testing
     glEnable(GL_DEPTH_TEST);
 
+    bool logFlag = true;
+
     bool running = true;
     while (running) {
 
-        LOG(bounceFunction((GLfloat)SDL_GetTicks() / 1000.0f,5.0f));
+//        LOG(bounceFunction((GLfloat)SDL_GetTicks() / 1000.0f,5.0f));
 
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
@@ -269,13 +302,21 @@ int main(int argc, char* argv[]) {
                             // Set up the modelview matrix
                             glMatrixMode(GL_MODELVIEW);
                             glLoadIdentity();
-                            glTranslatef(0.0f, 0.0f, bounceFunction((GLfloat)SDL_GetTicks() / 1000.0f,5.0f));
+                            glTranslatef(0.0f, 0.0f, bounceFunction((GLfloat)SDL_GetTicks() / 1000.0f,height));
                             if(rotationSpeed>37.5f){rotationSpeed -= (GLfloat)SDL_GetTicks() / 1000.0f;}
                             if(rotationSpeed>7.5f){rotationSpeed -= (GLfloat)SDL_GetTicks() / 10000.0f;}
                             if(!stopFlag) rotationAngle = (GLfloat)SDL_GetTicks() / 100.0f * rotationSpeed; //problem is this line cannot be easily adjusted to other modes of control
-                            glRotatef(rotationAngle, 1.0f, 1.0f, 1.0f); // Rotate the cube
+                            glRotatef(rotationAngle, Axis[axisMode*3], Axis[axisMode*3 + 1], Axis[axisMode*3 + 2]); // Rotate the cube
                             totalRotationAngle += rotationAngle;
-                            if(totalRotationAngle/100 >= 540){rotationSpeed=0;stopFlag = true;} //stop rotation, only safe beyond 180 deg as 90 deg time window not enough
+                            if(totalRotationAngle/100 >= 540){  //540, 720, 960 good
+                                rotationSpeed=0;
+                                stopFlag = true;
+                                if(logFlag){
+                                    LOG("end angle: "<<totalRotationAngle/100);
+                                    LOG(callRes(std::round(totalRotationAngle/100)));
+                                    logFlag = false;
+                                }
+                            } //stop rotation, only safe beyond 180 deg as 90 deg time window not enough
                             // Draw the cube
                             drawCube();
 
