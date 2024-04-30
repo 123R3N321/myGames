@@ -3,7 +3,7 @@
 
 
 #define GL_SILENCE_DEPRECATION
-#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_IMPLEMENTATION    //this is for sprite
 #define LOG(argument) std::cout << argument << '\n'
 #define GL_GLEXT_PROTOTYPES 1
 #define FIXED_TIMESTEP 0.0166666f
@@ -39,12 +39,23 @@ float height = 5.0f;    //3 - 7 ok, global param for falling height (so also siz
 
 
 ShaderProgram g_shader_program;
-GLuint g_player_texture_id;
+GLuint DICE1ID;
+GLuint DICE2ID;
+GLuint DICE3ID;
+GLuint DICE4ID;
+GLuint DICE5ID;
+GLuint DICE6ID;
+
 
 const char V_SHADER_PATH[] = "/home/ren/projects/myGames/include/shaders/vertex_textured.glsl",
         F_SHADER_PATH[] = "/home/ren/projects/myGames/include/shaders/fragment_textured.glsl",
         FONT_SPRITE_FILEPATH[]   = "/home/ren/projects/myGames/include/assets/font1.png",
-        PLAYER_SPRITE_FILEPATH[] = "/home/ren/projects/myGames/include/assets/RachelsRocket.png";
+        DICE1[] = "/home/ren/projects/myGames/include/assets/Moon.jpeg",
+        DICE2[] = "/home/ren/projects/myGames/include/assets/Moon.jpeg",
+        DICE3[] = "/home/ren/projects/myGames/include/assets/Moon.jpeg",
+        DICE4[] = "/home/ren/projects/myGames/include/assets/Moon.jpeg",
+        DICE6[] = "/home/ren/projects/myGames/include/assets/Moon.jpeg",
+DICE5[] = "/home/ren/projects/myGames/include/assets/simpleTile.png";
 
 const int NUMBER_OF_TEXTURES = 1;
 const GLint LEVEL_OF_DETAIL = 0;
@@ -122,82 +133,158 @@ GLuint load_texture(const char* filepath)
     return texture_id;
 }
 
-/////////////-----------------------------//////////////////
-
-//// Enable vertex attribute array for texture coordinates
-//glEnableVertexAttribArray(g_shader_program.texCoordAttribute);
-//
-//// Bind texture coordinates data to the vertex attribute
-//glVertexAttribPointer(g_shader_program.texCoordAttribute, 2, GL_FLOAT, GL_FALSE, 0, texture_coordinates);
-//
-//// Bind texture
-//glBindTexture(GL_TEXTURE_2D, g_player_texture_id);
-//glDrawArrays(GL_TRIANGLES, 0, 6); // we are now drawing 2 triangles, so we use 6 instead of 3
-//
-//// We disable two attribute arrays now
-//glDisableVertexAttribArray(g_shader_program.get_position_attribute());
-//glDisableVertexAttribArray(g_shader_program.get_tex_coordinate_attribute());
-//
-//SDL_GL_SwapWindow(display_window);
-//}
-
-//////////////////////////////////////////////////////////////////////////////////////
 
 
-void drawCube() {
-    // Front face
-    glBegin(GL_QUADS);
-    glColor3f(0.80f, 0.0f, 0.0f); // Red
-    glVertex3f(-0.5f, -0.5f, 0.5f);
-    glVertex3f(0.5f, -0.5f, 0.5f);
-    glVertex3f(0.5f, 0.5f, 0.5f);
-    glVertex3f(-0.5f, 0.5f, 0.5f);
-    glEnd();
+void drawCubeFace(GLfloat* vertices, GLfloat* texCoords, GLuint textureID) {
+    // Enable vertex array
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
-    // Back face
-    glBegin(GL_QUADS);
-    glColor3f(0.0f, 0.80f, 0.0f); // Green
-    glVertex3f(-0.5f, -0.5f, -0.5f);
-    glVertex3f(0.5f, -0.5f, -0.5f);
-    glVertex3f(0.5f, 0.5f, -0.5f);
-    glVertex3f(-0.5f, 0.5f, -0.5f);
-    glEnd();
+    // Specify vertex data
+    glVertexPointer(3, GL_FLOAT, 0, vertices);
+    glTexCoordPointer(2, GL_FLOAT, 0, texCoords);
 
-    // Top face
-    glBegin(GL_QUADS);
-    glColor3f(0.0f, 0.0f, 0.80f); // Blue
-    glVertex3f(-0.5f, 0.5f, -0.5f);
-    glVertex3f(0.5f, 0.5f, -0.5f);
-    glVertex3f(0.5f, 0.5f, 0.5f);
-    glVertex3f(-0.5f, 0.5f, 0.5f);
-    glEnd();
+    // Bind texture
+    glBindTexture(GL_TEXTURE_2D, textureID);
 
-    // Bottom face
-    glBegin(GL_QUADS);
-    glColor3f(0.80f, 0.80f, 0.0f); // Yellow
-    glVertex3f(-0.5f, -0.5f, -0.5f);
-    glVertex3f(0.5f, -0.5f, -0.5f);
-    glVertex3f(0.5f, -0.5f, 0.5f);
-    glVertex3f(-0.5f, -0.5f, 0.5f);
-    glEnd();
+    // Draw the face
+    glDrawArrays(GL_TRIANGLES, 0, 6);
 
-    // Right face
-    glBegin(GL_QUADS);
-    glColor3f(0.80f, 0.0f, 0.80f); // Magenta
-    glVertex3f(0.5f, -0.5f, -0.5f);
-    glVertex3f(0.5f, 0.5f, -0.5f);
-    glVertex3f(0.5f, 0.5f, 0.5f);
-    glVertex3f(0.5f, -0.5f, 0.5f);
-    glEnd();
+    // Disable vertex array
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+}
 
-    // Left face
-    glBegin(GL_QUADS);
-    glColor3f(0.0f, 0.80f, 0.80f); // Cyan
-    glVertex3f(-0.5f, -0.5f, -0.5f);
-    glVertex3f(-0.5f, 0.5f, -0.5f);
-    glVertex3f(-0.5f, 0.5f, 0.5f);
-    glVertex3f(-0.5f, -0.5f, 0.5f);
-    glEnd();
+
+GLfloat frontVertices[] = {
+        -0.5f, -0.5f, 0.5f,  // Vertex 1
+        0.5f, -0.5f, 0.5f,   // Vertex 2
+        -0.5f, 0.5f, 0.5f,   // Vertex 3
+        0.5f, -0.5f, 0.5f,   // Vertex 4
+        0.5f, 0.5f, 0.5f,    // Vertex 5
+        -0.5f, 0.5f, 0.5f    // Vertex 6
+};
+
+GLfloat frontTexCoords[] = {
+        0.0f, 0.0f,  // Texture coordinate for Vertex 1 (bottom-left corner)
+        1.0f, 0.0f,  // Texture coordinate for Vertex 2 (bottom-right corner)
+        0.0f, 1.0f,  // Texture coordinate for Vertex 3 (top-left corner)
+        1.0f, 0.0f,  // Texture coordinate for Vertex 4 (bottom-right corner)
+        1.0f, 1.0f,  // Texture coordinate for Vertex 5 (top-right corner)
+        0.0f, 1.0f   // Texture coordinate for Vertex 6 (top-left corner)
+};
+
+// Back face
+GLfloat backVertices[] = {
+        -0.5f, -0.5f, -0.5f, // Vertex 1
+        0.5f, -0.5f, -0.5f,  // Vertex 2
+        -0.5f, 0.5f, -0.5f,  // Vertex 3
+        0.5f, -0.5f, -0.5f,  // Vertex 4
+        0.5f, 0.5f, -0.5f,   // Vertex 5
+        -0.5f, 0.5f, -0.5f   // Vertex 6
+};
+
+GLfloat backTexCoords[] = {
+        1.0f, 1.0f,  // Texture coordinate for Vertex 1 (top-right corner)
+        0.0f, 1.0f,  // Texture coordinate for Vertex 2 (top-left corner)
+        1.0f, 0.0f,  // Texture coordinate for Vertex 3 (bottom-right corner)
+        0.0f, 1.0f,  // Texture coordinate for Vertex 4 (top-left corner)
+        0.0f, 0.0f,  // Texture coordinate for Vertex 5 (bottom-left corner)
+        1.0f, 0.0f   // Texture coordinate for Vertex 6 (bottom-right corner)
+};
+
+// Top face
+GLfloat topVertices[] = {
+        -0.5f, 0.5f, -0.5f,  // Vertex 1
+        0.5f, 0.5f, -0.5f,   // Vertex 2
+        -0.5f, 0.5f, 0.5f,   // Vertex 3
+        0.5f, 0.5f, -0.5f,   // Vertex 4
+        0.5f, 0.5f, 0.5f,    // Vertex 5
+        -0.5f, 0.5f, 0.5f    // Vertex 6
+};
+
+GLfloat topTexCoords[] = {
+        0.0f, 1.0f,  // Texture coordinate for Vertex 1 (bottom-left corner)
+        1.0f, 1.0f,  // Texture coordinate for Vertex 2 (bottom-right corner)
+        0.0f, 0.0f,  // Texture coordinate for Vertex 3 (top-left corner)
+        1.0f, 1.0f,  // Texture coordinate for Vertex 4 (bottom-right corner)
+        1.0f, 0.0f,  // Texture coordinate for Vertex 5 (top-right corner)
+        0.0f, 0.0f   // Texture coordinate for Vertex 6 (top-left corner)
+};
+
+
+// Bottom face
+GLfloat bottomVertices[] = {
+        -0.5f, -0.5f, -0.5f, // Vertex 1
+        0.5f, -0.5f, -0.5f,  // Vertex 2
+        -0.5f, -0.5f, 0.5f,  // Vertex 3
+        0.5f, -0.5f, -0.5f,  // Vertex 4
+        0.5f, -0.5f, 0.5f,   // Vertex 5
+        -0.5f, -0.5f, 0.5f   // Vertex 6
+};
+
+GLfloat bottomTexCoords[] = {
+        0.0f, 0.0f,  // Texture coordinate for Vertex 1 (top-left corner)
+        1.0f, 0.0f,  // Texture coordinate for Vertex 2 (top-right corner)
+        0.0f, 1.0f,  // Texture coordinate for Vertex 3 (bottom-left corner)
+        1.0f, 0.0f,  // Texture coordinate for Vertex 4 (top-right corner)
+        1.0f, 1.0f,  // Texture coordinate for Vertex 5 (bottom-right corner)
+        0.0f, 1.0f   // Texture coordinate for Vertex 6 (bottom-left corner)
+};
+
+// Right face
+GLfloat rightVertices[] = {
+        0.5f, -0.5f, -0.5f,  // Vertex 1
+        0.5f, 0.5f, -0.5f,   // Vertex 2
+        0.5f, -0.5f, 0.5f,   // Vertex 3
+        0.5f, 0.5f, -0.5f,   // Vertex 4
+        0.5f, 0.5f, 0.5f,    // Vertex 5
+        0.5f, -0.5f, 0.5f    // Vertex 6
+};
+
+GLfloat rightTexCoords[] = {
+        0.0f, 0.0f,  // Texture coordinate for Vertex 1 (bottom-left corner)
+        1.0f, 0.0f,  // Texture coordinate for Vertex 2 (bottom-right corner)
+        0.0f, 1.0f,  // Texture coordinate for Vertex 3 (top-left corner)
+        1.0f, 0.0f,  // Texture coordinate for Vertex 4 (bottom-right corner)
+        1.0f, 1.0f,  // Texture coordinate for Vertex 5 (top-right corner)
+        0.0f, 1.0f   // Texture coordinate for Vertex 6 (top-left corner)
+};
+
+// Left face
+GLfloat leftVertices[] = {
+        -0.5f, -0.5f, -0.5f, // Vertex 1
+        -0.5f, 0.5f, -0.5f,  // Vertex 2
+        -0.5f, -0.5f, 0.5f,  // Vertex 3
+        -0.5f, 0.5f, -0.5f,  // Vertex 4
+        -0.5f, 0.5f, 0.5f,   // Vertex 5
+        -0.5f, -0.5f, 0.5f   // Vertex 6
+};
+
+GLfloat leftTexCoords[] = {
+        1.0f, 0.0f,  // Texture coordinate for Vertex 1 (bottom-right corner)
+        0.0f, 0.0f,  // Texture coordinate for Vertex 2 (bottom-left corner)
+        1.0f, 1.0f,  // Texture coordinate for Vertex 3 (top-right corner)
+        0.0f, 0.0f,  // Texture coordinate for Vertex 4 (bottom-left corner)
+        0.0f, 1.0f,  // Texture coordinate for Vertex 5 (top-left corner)
+        1.0f, 1.0f   // Texture coordinate for Vertex 6 (top-right corner)
+};
+
+
+void standardDraw(GLuint DICE1ID, GLuint DICE2ID, GLuint DICE3ID, GLuint DICE4ID, GLuint DICE5ID, GLuint DICE6ID){
+
+    drawCubeFace(frontVertices, frontTexCoords, DICE1ID);
+
+    drawCubeFace(backVertices, backTexCoords, DICE2ID);
+
+    drawCubeFace(topVertices, topTexCoords, DICE3ID);
+
+    drawCubeFace(bottomVertices, bottomTexCoords, DICE4ID);
+
+    drawCubeFace(rightVertices, rightTexCoords, DICE5ID);
+
+    drawCubeFace(leftVertices, leftTexCoords, DICE6ID);
+
 }
 
 float bounceFunction(float time, float height) {
@@ -247,25 +334,27 @@ int main(int argc, char* argv[]) {
 
     SDL_GLContext context = SDL_GL_CreateContext(window);
 
+//    g_shader_program.load(V_SHADER_PATH, F_SHADER_PATH);    //sprite
+    DICE1ID = load_texture(DICE1); //sprite
+    DICE2ID = load_texture(DICE2); //sprite
+    DICE3ID = load_texture(DICE3); //sprite
+    DICE4ID = load_texture(DICE4); //sprite
+    DICE5ID = load_texture(DICE5); //sprite
+    DICE6ID = load_texture(DICE6); //sprite
 
-    //////////////////////////////////////////vvvvvvvvvvvvvvvvvvvvv/////
-//todo: figure out why shaderprogram loading kills the object, binding to quadrilateral,
-//todo: ask about it maybe
+    //    LOG("front texture ID: "<< frontTextureID<<"\n");
 
-//todo: tentative conclusion: it is because all faces have the same color.
 
-//    g_shader_program.load(V_SHADER_PATH, F_SHADER_PATH);
 
-//    glUseProgram(g_shader_program.get_program_id());
-//
-//    glClearColor(BG_RED, BG_BLUE, BG_GREEN, BG_OPACITY);
-//
-//    g_player_texture_id = load_texture(PLAYER_SPRITE_FILEPATH);
+
     float Axis[] = {                        //overall 3by3 is enough
             1.0f,1.0f,1.0f,     //blue
             1.0f,-1.0f,1.0f,    //pink
             1.0f,1.0f,-1.0f,    //cyan
     };
+
+    glEnable(GL_TEXTURE_2D);
+
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -318,8 +407,8 @@ int main(int argc, char* argv[]) {
                                 }
                             } //stop rotation, only safe beyond 180 deg as 90 deg time window not enough
                             // Draw the cube
-                            drawCube();
-
+//                            drawCube();
+                            standardDraw(DICE1ID, DICE2ID,DICE3ID,DICE4ID,DICE5ID,DICE6ID);
                             // Swap buffers
                             SDL_GL_SwapWindow(window);
     }
